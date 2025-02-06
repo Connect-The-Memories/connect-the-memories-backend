@@ -1,12 +1,14 @@
 from flask import Blueprint, request, session
 from flask_restx import Api, Namespace, Resource, abort
+import logging
+
 
 """
-    Import functions from services for user management and models for input specifications
+    Import functions from services for user management and models for input specifications.
 """
 from .services import (
-    sign_in,
-    sign_up,
+    log_in,
+    create_account,
     send_password_reset,
     check_password_strength
 
@@ -17,7 +19,8 @@ from .services import (
     # set_user_data,
 )
 
-from .models import create_login_model, create_signup_model
+from .models import create_account_model, logging_in_model
+
 
 """
     Declare blueprint, api, and namespace for authentication backend endpoints.
@@ -25,148 +28,86 @@ from .models import create_login_model, create_signup_model
 auth_bp = Blueprint("auth_bp", __name__)
 auth_api = Api(auth_bp, version="1.0", title="Authentication API", description="Endpoints for user authentication of React Frontend")
 auth_ns = Namespace("auth", description="Authentication Endpoints")
+auth_api.add_namespace(auth_ns)
+
 
 """
     Flask RESTX routes
 """
 
-signup_input = create_signup_model(auth_ns)
+create_account_input = create_account_model(auth_ns)
 
-@auth_ns.route('signup')
-class Signup(Resource):
+@auth_ns.route('/create_account')
+class CreateAccount(Resource):
     """
-        Signup route to create a new user based on the "signup" model as input
+        Create Account route to create a new user based on the "create_account" model as input.
     """
-    @auth_ns.expect(signup_input, validate=True)
+    @auth_ns.expect(create_account_input, validate=True)
     def post(self):
         data = request.json
 
         email = data.get("email")
         password = data.get("password")
-        birthday = data.get("birthday")
-        account_type = data.get("account_type")
+        """
+            Temporarily will be unused, once Firestore database access is implemented, will store there.
+        """
+        # birthday = data.get("birthday")
+        """
+        Logic to convert birthday to a 6digit auth code.
+        try:
+            date_obj = datetime.strptime(bday_str, "%Y-%m-%d")
+            formatted_bday = date_obj.strftime("%y%m%d")  
+            print("Formatted birthday:", formatted_bday)
+        except ValueError:
+            flash("Invalid birthday format")
+            return redirect(url_for("auth.signup"))
+        """
+        # account_type = data.get("account_type")
+
+        if not email or not password:
+            abort(400, "Email and password are required.")
 
         if not check_password_strength(password):
             abort(400, "Password is not strong enough.")
 
-        sign_up(email, password)
-        user = sign_in(email, password)
+        user = create_account(email, password)
+        logged_in_user = log_in(email, password)
 
-            
-
-
-
-
-
-
+        if logged_in_user:
+            session["firebase_token"] = logged_in_user["idToken"]
+            return {"message": "User created successfully."}, 200
+        else:
+            abort(400, "Sign-in failed after user creation.")
 
 
+logging_in_input = logging_in_model(auth_ns)
+
+@auth_ns.route('/logging_in')
+class LogginIn(Resource):
+    """
+        Login route for the user to log in using the "logging_in" model as input.
+    """
+    @auth_ns.expect(logging_in_input, validate=True)
+    def post(self):
+        data = request.json
+
+        email = data.get("email")
+        password = data.get("password")
+
+        try:
+            user = log_in(email, password)
+            session["firebase_token"] = user["idToken"]
+            return {"message": "User logged in successfully."}, 200
+        except Exception as e:
+            logging.error(f"Unexpected error during login: {e}")
+            abort(500, "An unexpected error occurred. Please try again.")
 
 
-# @auth_bp.route("/login", methods=["GET", "POST"])
-# def login():
-#     if request.method == "POST":
-#         email = request.form.get("email")
-#         password = request.form.get("pass")
-#         try:
-#             user = sign_in(email, password)  # from services.py
-#             session["is_logged_in"] = True
-#             session["email"] = user["email"]
-#             session["uid"] = user["localId"]
-
-#             # Fetch user data from RTDB
-#             data = get_user_data(session["uid"])
-#             if data:
-#                 session["name"] = data.get("name", "User")
-#                 # Update last logged in time
-#                 update_user_last_logged_in(session["uid"])
-#             else:
-#                 session["name"] = "User"
-
-#             # redirect to some "welcome" route in your main app
-#             return redirect(url_for("welcome"))  
-
-#         except Exception as e:
-#             print("Error occurred: ", e)
-#             flash("Login failed. Please try again.")
-#             return redirect(url_for("auth.login"))
-
-#     return render_template("login.html")
-
-
-# @auth_bp.route("/signup", methods=["GET"])
-# def signup():
-#     return render_template("signup.html")
-
-
-# @auth_bp.route("/register", methods=["POST", "GET"])
-# def register():
-#     if request.method == "POST":
-#         email = request.form.get("email")
-#         password = request.form.get("pass")
-#         name = request.form.get("name")
-#         bday_str = request.form.get("birthday")
-
-#         # Example: Convert or format birthday if needed
-#         try:
-#             date_obj = datetime.strptime(bday_str, "%Y-%m-%d")
-#             formatted_bday = date_obj.strftime("%y%m%d")  
-#             print("Formatted birthday:", formatted_bday)
-#         except ValueError:
-#             flash("Invalid birthday format")
-#             return redirect(url_for("auth.signup"))
-
-#         # Check password strength
-#         if not check_password_strength(password):
-#             flash("Password does not meet strength requirements")
-#             return redirect(url_for("auth.signup"))
-
-#         try:
-#             sign_up(email, password)
-#             user = sign_in(email, password)  # log in the user right away
-
-#             session["is_logged_in"] = True
-#             session["email"] = user["email"]
-#             session["uid"] = user["localId"]
-#             session["name"] = name
-
-#             # Save user data to RTDB
-#             data = {
-#                 "name": name,
-#                 "email": email,
-#                 "last_logged_in": datetime.now().strftime("%m/%d/%Y, %H:%M:%S"),
-#             }
-#             set_user_data(session["uid"], data)
-
-#             return redirect(url_for("welcome"))
-#         except Exception as e:
-#             print("Error occurred during registration: ", e)
-#             flash("Registration failed. Please try again.")
-#             return redirect(url_for("auth.signup"))
-#     else:
-#         # If GET, just redirect or render signup again
-#         return redirect(url_for("auth.signup"))
-
-
-# @auth_bp.route("/reset_password", methods=["GET", "POST"])
-# def reset_password():
-#     if request.method == "POST":
-#         email = request.form.get("email")
-#         try:
-#             send_password_reset(email)
-#             return render_template("reset_password_done.html")
-#         except Exception as e:
-#             print("Error occurred:", e)
-#             flash("An error occurred. Please try again.")
-#             return render_template("reset_password.html")
-#     return render_template("reset_password.html")
-
-
-# @auth_bp.route("/logout")
-# def logout():
-#     uid = session.get("uid")
-#     if uid:
-#         update_user_last_logged_out(uid)
-
-#     session.clear()
-#     return redirect(url_for("auth.login"))
+@auth_ns.route('/logout')
+class Logout(Resource):
+    """
+        Logout route to end session of user.
+    """
+    def post(self):
+        session.pop("firebase_token", None)
+        return {"message": "User has been logged out successfully."}, 200

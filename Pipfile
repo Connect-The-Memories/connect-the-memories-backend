@@ -4,11 +4,14 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-flask = "*"
-pyrebase4 = "*"
-flask-cors = "*"
 firebase-admin = "*"
+flask = "*"
+flask-cors = "*"
 flask-restx = "*"
+flask-testing = "*"
+pyrebase4 = "*"
+pytest = "*"
+setuptools = "*"
 
 [dev-packages]
 

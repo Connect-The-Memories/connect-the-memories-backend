@@ -1,15 +1,14 @@
 import pyrebase
 import re
-from datetime import datetime
 
 """
     Firebase configuration and initialization
 """
 config = {
-    "apiKey": "AIzaSyBgj03W5htH-pPrJcIIIGrpMTJ-BEVO9f8",
-    "authDomain": "temp-77f40.firebaseapp.com",
-    "databaseURL": "https://temp-77f40-default-rtdb.firebaseio.com/",
-    "storageBucket": "temp-77f40.firebasestorage.app"
+    "apiKey": "API_KEY",
+    "authDomain": "AUTH_DOMAIN",
+    "databaseURL": "DATABASE_URL",
+    "storageBucket": "STORAGE_BUCKET"
 }
 
 firebase = pyrebase.initialize_app(config)
@@ -35,14 +34,14 @@ def check_password_strength(password: str) -> bool:
 """
     Authentication functions to be used in routes
 """
-def sign_in(email: str, password: str):
+def log_in(email: str, password: str):
     """
         Attempts to sign in from email and pass. 
         If successful returns user dict of data, if not raises exception.
     """
     return firebase_auth.sign_in_with_email_and_password(email, password)
 
-def sign_up(email: str, password: str):
+def create_account(email: str, password: str):
     """
         Attempts to create a new user from email and password. 
         If successful returns user data, if user exists or other errors, exception is raised.
