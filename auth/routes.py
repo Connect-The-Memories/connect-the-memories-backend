@@ -1,6 +1,7 @@
+import logging
+
 from flask import Blueprint, request, session
 from flask_restx import Api, Namespace, Resource, abort
-import logging
 
 
 """
@@ -10,7 +11,8 @@ from .services import (
     log_in,
     create_account,
     send_password_reset,
-    check_password_strength
+    check_password_strength,
+    check_email_exists
 
     # These functions need to be updated, modified, or deleted so they will be commented out for now.
     # update_user_last_logged_in,
@@ -64,6 +66,9 @@ class CreateAccount(Resource):
         """
         # account_type = data.get("account_type")
 
+        if check_email_exists(email):
+            abort(400, "Account already exists, please log in.")
+
         if not email or not password:
             abort(400, "Email and password are required.")
 
@@ -94,13 +99,16 @@ class LogginIn(Resource):
         email = data.get("email")
         password = data.get("password")
 
+        if not check_email_exists(email):
+            abort(400, "Account does not exist, please sign up.")
+
         try:
             user = log_in(email, password)
             session["firebase_token"] = user["idToken"]
             return {"message": "User logged in successfully."}, 200
         except Exception as e:
             logging.error(f"Unexpected error during login: {e}")
-            abort(500, "An unexpected error occurred. Please try again.")
+            abort(400, "Invalid credentials, please try again.")
 
 
 @auth_ns.route('/logout')
@@ -123,6 +131,9 @@ class ResetPassword(Resource):
         data = request.json
 
         email = data.get("email")
+
+        if not check_email_exists(email):
+            abort(400, "Account does not exist, you cannot reset password.")
 
         try:
             send_password_reset(email)

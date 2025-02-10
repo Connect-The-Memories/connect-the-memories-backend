@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -9,10 +10,11 @@ class Config:
     DEBUG = os.getenv("DEBUG", "False").lower() in ["true", "1", "t"]
 
     # FireBase Environment Variables
+    FIREBASE_ADMIN_CREDENTIALS = os.getenv("FIREBASE_ADMIN_CREDENTIALS", "")
     FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY", "")
     FIREBASE_AUTH_DOMAIN = os.getenv("FIREBASE_AUTH_DOMAIN", "")
-    FIREBASE_DATABASE_URL = os.getenv("FIREBASE_DATABASE_URL", "")
-    FIREBASE_STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET", "")
+    # FIREBASE_DATABASE_URL = os.getenv("FIREBASE_DATABASE_URL", "")
+    # FIREBASE_STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET", "")
 
 class DevelopmentConfig(Config):
     DEBUG = True

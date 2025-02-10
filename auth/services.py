@@ -1,6 +1,8 @@
 import re
+import logging
 
-from firebase.initialize import firebase_auth
+from firebase_admin import auth
+from firebase.initialize import pyre_auth
 
 """
     Helper function for checking password strength
@@ -26,41 +28,43 @@ def log_in(email: str, password: str):
         Attempts to sign in from email and pass. 
         If successful returns user dict of data, if not raises exception.
     """
-    return firebase_auth.sign_in_with_email_and_password(email, password)
+    return pyre_auth.sign_in_with_email_and_password(email, password)
 
 def create_account(email: str, password: str):
     """
         Attempts to create a new user from email and password. 
         If successful returns user data, if user exists or other errors, exception is raised.
     """
-    return firebase_auth.create_user_with_email_and_password(email, password)
+    return pyre_auth.create_user_with_email_and_password(email, password)
 
 def send_password_reset(email: str):
     """
         Send a password reset email.
         Raises an exception on failure.
     """
-    return firebase_auth.send_password_reset_email(email)
+    return pyre_auth.send_password_reset_email(email)
 
+
+"""
+    Firebase Admin Functions to check account existence
+"""
+def check_email_exists(email: str):
+    """
+        Given email, checks whether or not it exists in the Firebase system.
+    """
+    try:
+        user = auth.get_user_by_email(email)
+        return True
+    except auth.UserNotFoundError:
+        return False
+    except Exception as e:
+        logging.error(f"Unexpected error during login: {e}")
+        return False
 
 """
     Code written from example online, will modify when needed.
     #TODO: Modify/Delete code once needed
 """
-# def update_user_last_logged_in(uid: str):
-#     """
-#     Update 'last_logged_in' field in the RTDB for the given user UID.
-#     """
-#     now_str = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
-#     db.child("users").child(uid).update({"last_logged_in": now_str})
-
-# def update_user_last_logged_out(uid: str):
-#     """
-#     Update 'last_logged_out' field in the RTDB for the given user UID.
-#     """
-#     now_str = datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
-#     db.child("users").child(uid).update({"last_logged_out": now_str})
-
 # def get_user_data(uid: str):
 #     """
 #     Fetch user data from RTDB. Returns dict or None if user not found.
