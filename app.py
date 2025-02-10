@@ -3,9 +3,11 @@ from flask_cors import CORS
 
 from auth import auth_bp
 
+from config import app_config
+
 def create_app():
     app = Flask(__name__)
-    app.secret_key = "SUPER_SECRET_KEY"
+    app.config.from_object(app_config)
     CORS(app)
 
     app.register_blueprint(auth_bp, url_prefix="/api")
@@ -14,4 +16,4 @@ def create_app():
 
 if __name__ == '__main__':
     app = create_app()
-    # app.run(debug=True)
+    app.run(debug=app.config["DEBUG"])

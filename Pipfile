@@ -11,6 +11,7 @@ flask-restx = "*"
 flask-testing = "*"
 pyrebase4 = "*"
 pytest = "*"
+python-dotenv = "*"
 setuptools = "*"
 
 [dev-packages]

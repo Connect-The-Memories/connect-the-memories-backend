@@ -1,19 +1,6 @@
-import pyrebase
 import re
 
-"""
-    Firebase configuration and initialization
-"""
-config = {
-    "apiKey": "API_KEY",
-    "authDomain": "AUTH_DOMAIN",
-    "databaseURL": "DATABASE_URL",
-    "storageBucket": "STORAGE_BUCKET"
-}
-
-firebase = pyrebase.initialize_app(config)
-firebase_auth = firebase.auth()
-db = firebase.database()
+from firebase.initialize import firebase_auth
 
 """
     Helper function for checking password strength
