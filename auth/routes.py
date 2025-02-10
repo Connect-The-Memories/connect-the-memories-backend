@@ -111,3 +111,22 @@ class Logout(Resource):
     def post(self):
         session.pop("firebase_token", None)
         return {"message": "User has been logged out successfully."}, 200
+
+
+@auth_ns.route('/reset_password')
+class ResetPassword(Resource):
+    """
+        Reset password route so that the user can reset their password given an email.
+        #TODO: Add a check if the email exists or not.
+    """
+    def post(self):
+        data = request.json
+
+        email = data.get("email")
+
+        try:
+            send_password_reset(email)
+            return {"message": "Reset password email has been sent."}, 200
+        except Exception as e:
+            logging.error(f"Unexpected error during login: {e}")
+            abort(500, "An unexpected error occurred. Please try again.")

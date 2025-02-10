@@ -29,3 +29,27 @@ def test_logout(client):
     response = client.post("/api/auth/logout")
     assert response.status_code == 200
     assert response.json["message"] == "User has been logged out successfully."
+
+def test_login_and_out(client):
+    login_response = response = client.post("/api/auth/logging_in", json={
+        "email": "test@gmail.com",
+        "password": "StrongPass123!"
+    })
+    assert response.status_code == 200
+    token = login_response.json.get("token")
+
+    with client.session_transaction() as session:
+        session["firebase_token"] = token
+
+    response = client.post("/api/auth/logout")
+
+    assert response.status_code == 200
+    assert response.json["message"] == "User has been logged out successfully."
+
+    with client.session_transaction() as sess:
+        assert "firebase_token" not in sess
+
+def test_reset_password(client):
+    response = client.post("/api/auth/reset_password", json={"email": "test@gmail.com"})
+    assert response.status_code == 200
+    assert response.json["message"] == "Reset password email has been sent."
