@@ -14,6 +14,7 @@ firebase_admin.initialize_app(cred)
 firestore_db = firestore.client()
 # TODO: Initialize storage
 
+
 """
     Pyrebase Config and Initialization
 """

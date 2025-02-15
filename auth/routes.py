@@ -1,4 +1,4 @@
-import logging
+from datetime import datetime
 
 from flask import Blueprint, request, session
 from flask_restx import Api, Namespace, Resource, abort
@@ -7,18 +7,20 @@ from flask_restx import Api, Namespace, Resource, abort
 """
     Import functions from services for user management and models for input specifications.
 """
+from .models import create_account_model, logging_in_model
+
 from .services import (
+    # Helper functions for routes.
+    format_dob,
+    
+    # Primary functions for routes.
+    send_password_reset,
     log_in,
     create_account,
-    send_password_reset,
     delete_account
-
-    # These functions need to be updated, modified, or deleted so they will be commented out for now.
-    # get_user_data,
-    # set_user_data,
 )
 
-from .models import create_account_model, logging_in_model
+from firebase.initialize import firestore_db
 
 
 """
@@ -31,10 +33,9 @@ auth_api.add_namespace(auth_ns)
 
 
 """
-    Flask RESTX routes
+    Flask RestX routes
 """
 create_account_input = create_account_model(auth_ns)
-
 @auth_ns.route('/create_account')
 class CreateAccount(Resource):
     """
@@ -46,34 +47,31 @@ class CreateAccount(Resource):
 
         email = data.get("email")
         password = data.get("password")
-        """
-            Temporarily will be unused, once Firestore database access is implemented, will store there.
-        """
-        # birthday = data.get("birthday")
-        """
-        Logic to convert birthday to a 6digit auth code.
-        try:
-            date_obj = datetime.strptime(bday_str, "%Y-%m-%d")
-            formatted_bday = date_obj.strftime("%y%m%d")  
-            print("Formatted birthday:", formatted_bday)
-        except ValueError:
-            flash("Invalid birthday format")
-            return redirect(url_for("auth.signup"))
-        """
-        # account_type = data.get("account_type")
-
+        dob = data.get("birthday")
+        dob_full, dob_6digit = format_dob(dob)
+        account_type = data.get("account_type")
+  
         try:
             create_account(email, password)
-            session["firebase_token"] = log_in(email, password)
+            user = log_in(email, password)
+
+            session["firebase_token"] = user.get("idToken")
+            firestore_db.collection("users").document(user.get("localId")).set({
+                "email": email,
+                "date_of_birth_full": dob_full,
+                "date_of_birth_6digit": dob_6digit,
+                "account_type": account_type,
+                "created_at": datetime.now(),
+                "last_login": datetime.now()
+            })
+
             return {"message": "User created successfully."}, 200
         except ValueError as e:
             abort(400, str(e))
         except RuntimeError as e:
             abort(500, str(e))
 
-
 logging_in_input = logging_in_model(auth_ns)
-
 @auth_ns.route('/logging_in')
 class LogginIn(Resource):
     """
@@ -85,9 +83,26 @@ class LogginIn(Resource):
 
         email = data.get("email")
         password = data.get("password")
+        dob_input = data.get("dob")
+        _, dob_6digit = format_dob(dob_input)
 
         try:
-            session["firebase_token"] = log_in(email, password)
+            user = log_in(email, password)
+
+            user_data = firestore_db.collection("users").document(user.get("localId")).get()
+            if not user_data.exists:
+                abort(400, "User data does not exist in the database.")
+
+            user = user_data.to_dict()
+            stored_dob_6digit = user.get("date_of_birth_6digit")
+
+            if dob_6digit != stored_dob_6digit:
+                abort(400, "Verification using date of birth failed.")
+
+            session["firebase_token"] = user.get("idToken")
+            firestore_db.collection("users").document(user.get("localId")).update({
+                "last_login": datetime.now()
+            })
             return {"message": "User logged in successfully."}, 200
         except ValueError as e:
             abort(400, str(e))
@@ -102,7 +117,6 @@ class Logout(Resource):
     def post(self):
         session.pop("firebase_token", None)
         return {"message": "User has been logged out successfully."}, 200
-
 
 @auth_ns.route('/reset_password')
 class ResetPassword(Resource):
@@ -122,7 +136,6 @@ class ResetPassword(Resource):
         except RuntimeError as e:
             abort(500, str(e))
 
-
 @auth_ns.route('/delete_account')
 class DeleteAccount(Resource):
     """
@@ -134,5 +147,5 @@ class DeleteAccount(Resource):
             delete_account(firebase_token)
             session.pop("firebase_token", None)
             return {"message": "Account has been deleted. You have been logged out."}, 200
-        except RuntimeError     as e:
+        except RuntimeError as e:
             abort(500, str(e))

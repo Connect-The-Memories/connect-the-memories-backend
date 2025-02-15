@@ -1,11 +1,18 @@
-import re
+from datetime import datetime
 import logging
+import re
 
 from firebase_admin import auth
 from firebase.initialize import pyre_auth
 
 """
-    Helper function for checking password strength
+    Import Firebase Admin Helper Functions
+"""
+from firebase.helper_functions import check_email_exists, verify_user_token
+
+
+"""
+    Helper Functions
 """
 def check_password_strength(password: str) -> bool:
     """
@@ -19,9 +26,20 @@ def check_password_strength(password: str) -> bool:
     pattern = r'^(?=.*\d)(?=.*[!@#$%^&*])(?=.*[a-z])(?=.*[A-Z]).{8,}$'
     return re.match(pattern, password) is not None
 
+def format_dob(dob: str) -> str:
+    """
+        Convert date of birth to both YYYY-MM-DD for showing the user in the future and MMDDYY for simple 2FA.
+    """
+    try:
+        date_obj = datetime.strptime(dob, "%Y-%m-%d")
+        return date_obj, date_obj.strftime("%m%d%y")
+    except ValueError:
+        logging.error("Error in converting DoB to correct format.")
+        raise ValueError("Invalid DoB format.")
+
 
 """
-    Authentication functions to be used in routes
+    Authentication Functions
 """
 def log_in(email: str, password: str) -> str:
     """
@@ -32,8 +50,7 @@ def log_in(email: str, password: str) -> str:
         raise ValueError("Account does not exist, please sign up.")
 
     try:
-        user = pyre_auth.sign_in_with_email_and_password(email, password)
-        return user["idToken"]
+        return pyre_auth.sign_in_with_email_and_password(email, password) 
     except Exception as e:
         logging.error(f"Error during login: {e}")
         raise RuntimeError("Invalid credentials, please try again.")
@@ -95,37 +112,3 @@ def delete_account(firebase_token: str) -> None:
     except Exception as e:
         logging.error(f"Error deleting account: {e}")
         raise RuntimeError("Account deletion failed. Please try again.")
-
-
-"""
-    Firebase Admin Functions to check account existence
-"""
-def check_email_exists(email: str) -> bool:
-    """
-        Given email, checks whether or not it exists in the Firebase system.
-    """
-    try:
-        user = auth.get_user_by_email(email)
-        return True
-    except auth.UserNotFoundError:
-        return False
-    except Exception as e:
-        logging.error(f"Unexpected error during login: {e}")
-        return False
-
-"""
-    Code written from example online, will modify when needed.
-    #TODO: Modify/Delete code once needed
-"""
-# def get_user_data(uid: str):
-#     """
-#     Fetch user data from RTDB. Returns dict or None if user not found.
-#     """
-#     user_data = db.child("users").child(uid).get().val()
-#     return user_data
-
-# def set_user_data(uid: str, data: dict):
-#     """
-#     Write user data to RTDB under 'users/<uid>'.
-#     """
-#     db.child("users").child(uid).set(data)
