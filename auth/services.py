@@ -26,16 +26,22 @@ def check_password_strength(password: str) -> bool:
     pattern = r'^(?=.*\d)(?=.*[!@#$%^&*])(?=.*[a-z])(?=.*[A-Z]).{8,}$'
     return re.match(pattern, password) is not None
 
-def format_dob(dob: str) -> str:
+def format_dob(dob: str) -> tuple[str, str]:
     """
         Convert date of birth to both YYYY-MM-DD for showing the user in the future and MMDDYY for simple 2FA.
     """
+    if dob is None:
+        logging.error("Received None for date of birth.")
+        raise ValueError("Date of Birth is required but was not provided.")
+
     try:
-        date_obj = datetime.strptime(dob, "%Y-%m-%d")
-        return date_obj, date_obj.strftime("%m%d%y")
-    except ValueError:
-        logging.error("Error in converting DoB to correct format.")
-        raise ValueError("Invalid DoB format.")
+        date_obj = datetime.strptime(dob, "%Y-%m-%d") 
+        dob_full = date_obj.strftime("%Y-%m-%d")
+        dob_6digit = date_obj.strftime("%m%d%y")
+        return dob_full, dob_6digit
+    except ValueError as e:
+        logging.error(f"Error in converting DOB '{dob}': {e}")
+        raise ValueError("Invalid Date of Birth format. Expected YYYY-MM-DD.")
 
 
 """

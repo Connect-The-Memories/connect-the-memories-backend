@@ -47,10 +47,11 @@ class CreateAccount(Resource):
 
         email = data.get("email")
         password = data.get("password")
-        dob = data.get("birthday")
-        dob_full, dob_6digit = format_dob(dob)
+        dob = data.get("dob")
         account_type = data.get("account_type")
   
+        dob_full, dob_6digit = format_dob(dob)
+        
         try:
             create_account(email, password)
             user = log_in(email, password)
@@ -65,7 +66,10 @@ class CreateAccount(Resource):
                 "last_login": datetime.now()
             })
 
-            return {"message": "User created successfully."}, 200
+            return {
+                "message": "User created and logged in successfully.",
+                "account_type": account_type
+                }, 200
         except ValueError as e:
             abort(400, str(e))
         except RuntimeError as e:
@@ -76,6 +80,7 @@ logging_in_input = logging_in_model(auth_ns)
 class LogginIn(Resource):
     """
         Login route for the user to log in using the "logging_in" model as input.
+        TODO: Implement 2FA with date of birth once available in frontend.
     """
     @auth_ns.expect(logging_in_input, validate=True)
     def post(self):
@@ -83,27 +88,32 @@ class LogginIn(Resource):
 
         email = data.get("email")
         password = data.get("password")
-        dob_input = data.get("dob")
-        _, dob_6digit = format_dob(dob_input)
+        # dob_input = data.get("dob")
+        # _, dob_6digit = format_dob(dob_input)
 
         try:
             user = log_in(email, password)
 
-            user_data = firestore_db.collection("users").document(user.get("localId")).get()
-            if not user_data.exists:
+            user_data = firestore_db.collection("users").document(user.get("localId"))
+            user_data_snapshot = user_data.get()
+            if not user_data_snapshot.exists:
                 abort(400, "User data does not exist in the database.")
 
-            user = user_data.to_dict()
-            stored_dob_6digit = user.get("date_of_birth_6digit")
+            user = user_data_snapshot.to_dict()
+            # stored_dob_6digit = user.get("date_of_birth_6digit")
+            stored_account_type = user.get("account_type")
 
-            if dob_6digit != stored_dob_6digit:
-                abort(400, "Verification using date of birth failed.")
+            # if dob_6digit != stored_dob_6digit:
+            #     abort(400, "Verification using date of birth failed.")
 
             session["firebase_token"] = user.get("idToken")
-            firestore_db.collection("users").document(user.get("localId")).update({
+            user_data.update({
                 "last_login": datetime.now()
             })
-            return {"message": "User logged in successfully."}, 200
+            return {
+                "message": "User logged in successfully.",
+                "account_type": stored_account_type
+                }, 200
         except ValueError as e:
             abort(400, str(e))
         except RuntimeError as e:

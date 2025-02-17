@@ -6,6 +6,8 @@ from flask_restx import Namespace, fields
 """
 def create_account_model(namespace: Namespace):
     return namespace.model('SignupModel', {
+        "first_name": fields.String(required=False, min_length=1, max_length=32),
+        "last_name": fields.String(required=False, min_length=1, max_length=32),
         "email": fields.String(required=True, min_length=3, max_length=64),
         "password": fields.String(required=True, min_length=8, max_length=32),
         "dob": fields.Date(required=True),
@@ -16,5 +18,5 @@ def logging_in_model(namespace: Namespace):
     return namespace.model('LoginModel', {
         "email": fields.String(required=True, min_length=3, max_length=64),
         "password": fields.String(required=True, min_length=8, max_length=32),
-        "dob": fields.Date(required=True)
+        "dob": fields.Date(required=False) # Optional for now, but will be required for 2FA once that is implemented.
         })
