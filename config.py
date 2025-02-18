@@ -16,6 +16,9 @@ class Config:
     # FIREBASE_DATABASE_URL = os.getenv("FIREBASE_DATABASE_URL", "")
     # FIREBASE_STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET", "")
 
+    # Frontend URL
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
 class DevelopmentConfig(Config):
     DEBUG = True
 

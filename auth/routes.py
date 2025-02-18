@@ -33,16 +33,24 @@ auth_api.add_namespace(auth_ns)
 
 
 """
-    Flask RestX routes
+    Flask RestX routes (based on Flask-RESTX documentation and official example.)
 """
 create_account_input = create_account_model(auth_ns)
-@auth_ns.route('/create_account')
-class CreateAccount(Resource):
+logging_in_input = logging_in_model(auth_ns)
+
+@auth_ns.route("/account")
+class Account(Resource):
     """
-        Create Account route to create a new user based on the "create_account" model as input.
+        TODO: Implement routes that are listed as not implemented.
+        (GET) Route to retrieve user account information. (Currently not implemented, will implement in future.)
+        (PUT) Route to update user account information. (Currently not implemented, will implement in future if needed.)
     """
-    @auth_ns.expect(create_account_input, validate=True)
+    @auth_ns.expect(create_account_input)
+    @auth_ns.doc("create_account")
     def post(self):
+        """
+            (POST /account) Route to create a new user, using the "create_account" model as input.
+        """
         data = request.json
 
         email = data.get("email")
@@ -69,21 +77,34 @@ class CreateAccount(Resource):
             return {
                 "message": "User created and logged in successfully.",
                 "account_type": account_type
-                }, 200
+                }, 201
         except ValueError as e:
             abort(400, str(e))
         except RuntimeError as e:
             abort(500, str(e))
 
-logging_in_input = logging_in_model(auth_ns)
-@auth_ns.route('/logging_in')
-class LogginIn(Resource):
-    """
-        Login route for the user to log in using the "logging_in" model as input.
-        TODO: Implement 2FA with date of birth once available in frontend.
-    """
-    @auth_ns.expect(logging_in_input, validate=True)
-    def post(self):
+    @auth_ns.doc("delete_account")
+    def delete(self):
+        """
+            (DELETE /account) Route to delete user account.
+        """
+        try:
+            firebase_token = session.get("firebase_token")
+            delete_account(firebase_token)
+            session.pop("firebase_token", None)
+            return {"message": "Account has been deleted. You have been logged out."}, 204
+        except RuntimeError as e:
+            abort(500, str(e))
+
+
+@auth_ns.route("/account/login")
+class AccountLogin(Resource):
+     """
+        (POST) Route to log in a user, using the "logging_in" model as input.
+     """
+     @auth_ns.expect(logging_in_input, validate=True)
+     @auth_ns.doc("logging_in")
+     def post(self):
         data = request.json
 
         email = data.get("email")
@@ -119,20 +140,24 @@ class LogginIn(Resource):
         except RuntimeError as e:
             abort(500, str(e))
 
-@auth_ns.route('/logout')
-class Logout(Resource):
+
+@auth_ns.route("/account/logout")
+class AccountLogout(Resource):
     """
-        Logout route to end session of user.
+        (POST) Route to log out a user.
     """
+    @auth_ns.doc("logout")
     def post(self):
         session.pop("firebase_token", None)
         return {"message": "User has been logged out successfully."}, 200
 
-@auth_ns.route('/reset_password')
-class ResetPassword(Resource):
+
+@auth_ns.route("/account/reset_password")
+class AccountResetPassword(Resource):
     """
-        Reset password route so that the user can reset their password given an email.
+        (POST) Route to reset a user's password.
     """
+    @auth_ns.doc("reset_password")
     def post(self):
         data = request.json
 
@@ -140,22 +165,8 @@ class ResetPassword(Resource):
 
         try:
             send_password_reset(email)
-            return {"message": "Reset password email has been sent."}, 200
+            return {"message": "Password reset email has been sent."}, 200
         except ValueError as e:
             abort(400, str(e))
-        except RuntimeError as e:
-            abort(500, str(e))
-
-@auth_ns.route('/delete_account')
-class DeleteAccount(Resource):
-    """
-        As long as the user is logged in, delete the account if the user wants to.
-    """
-    def post(self):
-        try:
-            firebase_token = session.get("firebase_token")
-            delete_account(firebase_token)
-            session.pop("firebase_token", None)
-            return {"message": "Account has been deleted. You have been logged out."}, 200
         except RuntimeError as e:
             abort(500, str(e))
