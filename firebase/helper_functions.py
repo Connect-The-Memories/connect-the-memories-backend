@@ -25,7 +25,7 @@ def verify_user_token(firebase_token: str) -> bool:
     """
     try:
         decoded_token = auth.verify_id_token(firebase_token)
-        return True
+        return True, decoded_token
     except Exception as e:
         logging.error(f"Error verifying user token: {e}")
         return False
