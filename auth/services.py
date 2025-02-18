@@ -43,6 +43,12 @@ def format_dob(dob: str) -> tuple[str, str]:
         logging.error(f"Error in converting DOB '{dob}': {e}")
         raise ValueError("Invalid Date of Birth format. Expected YYYY-MM-DD.")
 
+def check_valid_email(email: str) -> bool:
+    """
+        Check if the email is valid.
+    """
+    return re.match(r"[^@]+@[^@]+\.[^@]+", email) is not None
+
 
 """
     Authentication Functions
@@ -66,6 +72,12 @@ def create_account(email: str, password: str) -> None:
         Attempts to create a new user from email and password. Also automatically sends verification email upon creation.
         If successful returns user data, if user exists or other errors, exception is raised.
     """
+    if not check_valid_email(email):
+        raise ValueError("Invalid email format. Please try again.")
+
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters.")
+
     if check_email_exists(email):
         raise ValueError("Account already exists, please log in.")
     
