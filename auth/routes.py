@@ -20,6 +20,8 @@ from .services import (
     delete_account
 )
 
+from database.services_firestore import delete_user_data
+
 from firebase.initialize import firestore_db
 from firebase.helper_functions import verify_user_token
 
@@ -95,10 +97,12 @@ class Account(Resource):
             if not firebase_token:
                 abort(400, "User is not logged in.")
             
-            if not verify_user_token(firebase_token):
+            bool, decoded_user_token = verify_user_token(firebase_token)
+            if not bool:
                 abort(400, "Firebase token is invalid.")
 
             delete_account(firebase_token)
+            delete_user_data(decoded_user_token.get("uid"))
             session.pop("firebase_token", None)
             return {}, 204
         except RuntimeError as e:
