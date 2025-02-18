@@ -21,6 +21,7 @@ from .services import (
 )
 
 from firebase.initialize import firestore_db
+from firebase.helper_functions import verify_user_token
 
 
 """
@@ -90,9 +91,16 @@ class Account(Resource):
         """
         try:
             firebase_token = session.get("firebase_token")
+
+            if not firebase_token:
+                abort(400, "User is not logged in.")
+            
+            if not verify_user_token(firebase_token):
+                abort(400, "Firebase token is invalid.")
+
             delete_account(firebase_token)
             session.pop("firebase_token", None)
-            return {"message": "Account has been deleted. You have been logged out."}, 204
+            return {}, 204
         except RuntimeError as e:
             abort(500, str(e))
 
@@ -114,7 +122,8 @@ class AccountLogin(Resource):
 
         try:
             user = log_in(email, password)
-
+            session["firebase_token"] = user.get("idToken")
+  
             user_data = firestore_db.collection("users").document(user.get("localId"))
             user_data_snapshot = user_data.get()
             if not user_data_snapshot.exists:
@@ -127,7 +136,6 @@ class AccountLogin(Resource):
             # if dob_6digit != stored_dob_6digit:
             #     abort(400, "Verification using date of birth failed.")
 
-            session["firebase_token"] = user.get("idToken")
             user_data.update({
                 "last_login": datetime.now()
             })

@@ -8,7 +8,7 @@ from firebase.initialize import pyre_auth
 """
     Import Firebase Admin Helper Functions
 """
-from firebase.helper_functions import check_email_exists, verify_user_token
+from firebase.helper_functions import check_email_exists
 
 
 """
@@ -72,6 +72,9 @@ def create_account(email: str, password: str) -> None:
         Attempts to create a new user from email and password. Also automatically sends verification email upon creation.
         If successful returns user data, if user exists or other errors, exception is raised.
     """
+    if password is None or email is None:
+        raise ValueError("Missing email or password, please provide and try again.")
+
     if not check_valid_email(email):
         raise ValueError("Invalid email format. Please try again.")
 

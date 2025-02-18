@@ -6,7 +6,7 @@ load_dotenv()
 
 class Config:
     # Flask nvironment Variables
-    SECRET_KEY = os.getenv("SECRET_KEY", "defaul_secret_key")
+    SECRET_KEY = os.getenv("SECRET_KEY", "default_secret_key")
     DEBUG = os.getenv("DEBUG", "False").lower() in ["true", "1", "t"]
 
     # FireBase Environment Variables
