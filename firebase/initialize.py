@@ -8,8 +8,11 @@ from config import app_config
 """
     Firebase Admin Credentials and Initialization
 """
-cred = credentials.Certificate(app_config.FIREBASE_ADMIN_CREDENTIALS)
-firebase_admin.initialize_app(cred)
+if not app_config.FIREBASE_ADMIN_CREDENTIALS == "":
+    cred = credentials.Certificate(app_config.FIREBASE_ADMIN_CREDENTIALS)
+    firebase_admin.initialize_app(cred)
+else:
+    firebase_admin.initialize_app()
 
 firestore_db = firestore.client()
 # TODO: Initialize storage
