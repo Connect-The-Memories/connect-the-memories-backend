@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Blueprint, request, session
+from flask import Blueprint, jsonify, make_response, request, session
 from flask_restx import Api, Namespace, Resource, abort
 
 
@@ -20,10 +20,10 @@ from .services import (
     delete_account
 )
 
-from database.services_firestore import delete_user_data
+from database.services_firestore import create_user_data, delete_user_data
 
-from firebase.initialize import firestore_db
 from firebase.helper_functions import verify_user_token
+from firebase.initialize import firestore_db
 
 
 """
@@ -56,6 +56,8 @@ class Account(Resource):
         """
         data = request.json
 
+        first_name = data.get("first_name")
+        last_name = data.get("last_name")
         email = data.get("email")
         password = data.get("password")
         dob = data.get("dob")
@@ -68,23 +70,16 @@ class Account(Resource):
             user = log_in(email, password)
 
             session["firebase_token"] = user.get("idToken")
-            firestore_db.collection("users").document(user.get("localId")).set({
-                "email": email,
-                "date_of_birth_full": dob_full,
-                "date_of_birth_6digit": dob_6digit,
-                "account_type": account_type,
-                "created_at": datetime.now(),
-                "last_login": datetime.now()
-            })
+            create_user_data(user.get("localId"), first_name, last_name, email, dob_full, dob_6digit, account_type)
 
-            return {
+            return make_response(jsonify({
                 "message": "User created and logged in successfully.",
                 "account_type": account_type
-                }, 201
+                }), 201)
         except ValueError as e:
-            abort(400, str(e))
+            abort(400, {"error": str(e)})
         except RuntimeError as e:
-            abort(500, str(e))
+            abort(500, {"error": str(e)})
 
     @auth_ns.doc("delete_account")
     def delete(self):
@@ -95,24 +90,24 @@ class Account(Resource):
             firebase_token = session.get("firebase_token")
 
             if not firebase_token:
-                abort(400, "User is not logged in.")
+                abort(400, {"error": "User is not logged in."})
             
             bool, decoded_user_token = verify_user_token(firebase_token)
             if not bool:
-                abort(400, "Firebase token is invalid.")
+                abort(400, {"error": "Firebase token is invalid."})
 
             delete_account(firebase_token)
             delete_user_data(decoded_user_token.get("uid"))
             session.pop("firebase_token", None)
-            return {}, 204
+            return make_response(jsonify({}), 204)
         except RuntimeError as e:
-            abort(500, str(e))
+            abort(500, {"error": str(e)})
 
 
 @auth_ns.route("/account/login")
 class AccountLogin(Resource):
      """
-        (POST) Route to log in a user, using the "logging_in" model as input.
+        (POST /login) Route to log in a user, using the "logging_in" model as input.
      """
      @auth_ns.expect(logging_in_input, validate=True)
      @auth_ns.doc("logging_in")
@@ -131,7 +126,7 @@ class AccountLogin(Resource):
             user_data = firestore_db.collection("users").document(user.get("localId"))
             user_data_snapshot = user_data.get()
             if not user_data_snapshot.exists:
-                abort(400, "User data does not exist in the database.")
+                abort(400, {"error": "User data does not exist in the database."})
 
             user = user_data_snapshot.to_dict()
             # stored_dob_6digit = user.get("date_of_birth_6digit")
@@ -143,31 +138,36 @@ class AccountLogin(Resource):
             user_data.update({
                 "last_login": datetime.now()
             })
-            return {
+            return make_response(jsonify({
                 "message": "User logged in successfully.",
                 "account_type": stored_account_type
-                }, 200
+                }), 200)
         except ValueError as e:
-            abort(400, str(e))
+            abort(400, {"error": str(e)})
         except RuntimeError as e:
-            abort(500, str(e))
+            abort(500, {"error": str(e)})
 
 
 @auth_ns.route("/account/logout")
 class AccountLogout(Resource):
     """
-        (POST) Route to log out a user.
+        (POST /account/logout) Route to log out a user.
     """
     @auth_ns.doc("logout")
     def post(self):
+        is_verified, _ = verify_user_token(session.get("firebase_token"))
+        
+        if not is_verified:
+            abort(401, {"error": "User is not logged in and is unauthorized."})
+        
         session.pop("firebase_token", None)
-        return {"message": "User has been logged out successfully."}, 200
+        return make_response(jsonify({"message": "User has been logged out successfully."}), 200)
 
 
 @auth_ns.route("/account/reset_password")
 class AccountResetPassword(Resource):
     """
-        (POST) Route to reset a user's password.
+        (POST /account/reset_password) Route to reset a user's password.
     """
     @auth_ns.doc("reset_password")
     def post(self):
@@ -177,8 +177,8 @@ class AccountResetPassword(Resource):
 
         try:
             send_password_reset(email)
-            return {"message": "Password reset email has been sent."}, 200
+            return make_response(jsonify({"message": "Password reset email has been sent."}), 200)
         except ValueError as e:
-            abort(400, str(e))
+            abort(400, {"error": str(e)})
         except RuntimeError as e:
-            abort(500, str(e))
+            abort(500, {"error": str(e)})
