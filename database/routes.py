@@ -5,7 +5,7 @@ from flask_restx import Api, Namespace, Resource, abort
     Import functions from services for database access.
 """
 
-from .services_firestore import retrieve_messages, store_messages
+from .services_firestore import generate_otp, retrieve_messages, store_messages, validate_otp
 
 from firebase.helper_functions import verify_user_token
 
@@ -83,3 +83,59 @@ class Messages(Resource):
             }), 200)
         except Exception as e:
             abort(500, {"error": f"Failed to retrieve messages: {e}"})
+
+@database_ns.route("/firestore/otp")
+class OTP(Resource):
+    @database_ns.doc("generate_otp")
+    def post(self):
+        """
+            (POST /otp) Route to generate OTP for user.
+        """
+        firebase_token = session.get("firebase_token")
+
+        if firebase_token is None:
+            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
+
+        is_verified, decoded_user_token = verify_user_token(firebase_token)
+
+        if not is_verified:
+            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
+        
+        user_id = decoded_user_token.get("uid")
+
+        try:
+            otp = generate_otp(user_id)
+            return make_response(jsonify({"otp": otp}), 201)
+        except Exception as e:
+            return make_response(jsonify({"error": f"Failed to generate OTP: {str(e)}"}), 500)
+
+    
+    @database_ns.doc("validate_otp")
+    def put(self):
+        """
+            (PUT /otp) Route to validate OTP for user.
+        """
+        data = request.json
+
+        entered_otp = data.get("otp")
+        firebase_token = session.get("firebase_token")
+
+        if firebase_token is None:
+            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
+
+        is_verified, decoded_user_token = verify_user_token(firebase_token)
+
+        if not is_verified:
+            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
+        
+        support_user_id = decoded_user_token.get("uid")
+
+        try:
+            is_valid, msg = validate_otp(support_user_id, entered_otp)
+
+            if not is_valid:
+                return make_response(jsonify({"error": msg}), 400)
+            
+            return make_response(jsonify({"message": msg}), 200)
+        except Exception as e:
+            return make_response(jsonify({"error": f"Failed to validate OTP: {str(e)}"}), 500)
