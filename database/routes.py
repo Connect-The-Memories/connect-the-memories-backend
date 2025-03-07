@@ -42,19 +42,13 @@ class Messages(Resource):
         data = request.json
 
         message = data.get("message")
+        main_user_id = data.get("main_user_id")
 
-        firebase_token = session.get("firebase_token")
-
-        if firebase_token is None:
-            abort(401, {"error": "Unauthorized. Please log in and try again."})
-
-        is_verified, decoded_user_token = verify_user_token(firebase_token)
-
-        if not is_verified:
-            abort(401, {"error": "Unauthorized. Please log in and try again."})
+        if main_user_id is None:
+            abort(401, {"error": "Main user ID is required."})
 
         try:
-            doc_id = store_messages(decoded_user_token.get("uid"), message)
+            doc_id = store_messages(main_user_id, message)
             return make_response(jsonify({"message_id": doc_id}), 201)
         except Exception as e:
             abort(500, {"error": f"Failed to store message: {e}"})

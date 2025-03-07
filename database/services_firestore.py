@@ -53,15 +53,15 @@ def get_user_data(user_id: str) -> dict:
 """
     Firestore Service Function(s)
 """
-def store_messages(support_user_id: str, message: str) -> str:
+def store_messages(main_user_id: str, message: str) -> str:
     """
         Stores support user uploaded messages in Firestore.
-        #TODO: Work on figuring out how to store the messages in the main user's database instead of the support user's database. 
     """
-    
-    
-    user_ref = firestore_db.collection("users").document(user_id).collection("messages")
-    doc_ref = user_ref.add({**message, "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d")})
+    user_ref = firestore_db.collection("users").document(main_user_id).collection("messages")
+    doc_ref = user_ref.add({
+        "message": message,
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        })
     return doc_ref.id
 
 def retrieve_messages(user_id: str, last_message_id: str = None, limit: int = 5) -> tuple:
@@ -136,15 +136,23 @@ def validate_otp(support_user_id: str, entered_otp: str) -> tuple[bool, str]:
 
         main_user_data = get_user_data(main_user_id)
         main_user_full_name = f"{main_user_data['first_name']} {main_user_data['last_name']}"
+        """
+        Additional logic for if the main user requires easy query for support users.
         support_user_data = get_user_data(support_user_id)
         support_user_full_name = f"{support_user_data['first_name']} {support_user_data['last_name']}"
+        """
 
         firestore_db.collection("user_links").document(link_id).set({
             "main_user": main_user_id,
-            "main_user_full_name": main_user_full_name,
             "support_user": support_user_id,
-            "support_user_full_name": support_user_full_name,
             "linked_at": datetime.now(tz=timezone.utc)
+        })
+
+        supp_user_ref = firestore_db.collection("users").document(support_user_id)
+        supp_user_ref.set({
+            "linked_users": {
+                main_user_full_name: main_user_id
+            }
         }, merge=True)
 
         firestore_db.collection("one_time_codes").document(main_user_id).delete()
@@ -163,25 +171,4 @@ def get_linked_users(user_id: str):
         raise ValueError("User data does not exist in the database.")
     
     user_data = user.to_dict()
-    user_type = user_data["account_type"]
-
-    linked_users = {}
-
-    if user_type == "main":
-        user_links = firestore_db.collection("user_links").where("main_user", "==", user_id).stream()
-
-        for link in user_links:
-            link_data = link.to_dict()
-            linked_users[link_data["support_user_full_name"]] = link_data["support_user"]
-
-    elif user_type == "support":
-        user_links = firestore_db.collection("user_links").where("support_user", "==", user_id).stream()
-
-        for link in user_links:
-            link_data = link.to_dict()
-            linked_users[link_data["main_user_full_name"]] = link_data["main_user"]
-        
-    else:
-        raise ValueError("User account type is invalid.")
-
-    return linked_users
+    return user_data.get("linked_users", {})
