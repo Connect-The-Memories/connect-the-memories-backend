@@ -40,6 +40,16 @@ def create_user_data(user_id: str, first_name: str, last_name: str, email: str, 
     except Exception as e:
         raise RuntimeError(f"Error creating user data: {e}")
 
+def get_user_data(user_id: str) -> dict:
+    """
+        Given a user ID, retrieves the user's data from Firestore.
+    """
+    user_data = firestore_db.collection("users").document(user_id).get()
+    if not user_data.exists:
+        raise ValueError("User data does not exist in the database.")
+    
+    return user_data.to_dict()
+
 """
     Firestore Service Function(s)
 """
