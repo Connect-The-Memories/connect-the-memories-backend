@@ -31,7 +31,7 @@ def get_user_id_from_email(email: str) -> str:
         logging.error(f"Error retrieving user ID: {e}")
         return ""
 
-def verify_user_token(firebase_token: str) -> bool:
+def verify_user_token(firebase_token: str):
     """
         Given a firebase token, verifies if the token is valid.
     """

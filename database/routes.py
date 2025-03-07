@@ -5,7 +5,13 @@ from flask_restx import Api, Namespace, Resource, abort
     Import functions from services for database access.
 """
 
-from .services_firestore import generate_otp, retrieve_messages, store_messages, validate_otp
+from .services_firestore import (
+    generate_otp,
+    retrieve_messages,
+    store_messages,
+    validate_otp,
+    get_linked_users
+    )
 
 from firebase.helper_functions import verify_user_token
 
@@ -84,6 +90,7 @@ class Messages(Resource):
         except Exception as e:
             abort(500, {"error": f"Failed to retrieve messages: {e}"})
 
+
 @database_ns.route("/firestore/otp")
 class OTP(Resource):
     @database_ns.doc("generate_otp")
@@ -139,3 +146,29 @@ class OTP(Resource):
             return make_response(jsonify({"message": msg}), 200)
         except Exception as e:
             return make_response(jsonify({"error": f"Failed to validate OTP: {str(e)}"}), 500)
+
+
+@database_ns.route("/firestore/linked_accounts")
+class LinkedAccounts(Resource):
+    @database_ns.doc("get_linked_accounts")
+    def get(self):
+        """
+            (GET /linked_accounts) Route to get linked accounts for user.
+        """
+        firebase_token = session.get("firebase_token")
+
+        if firebase_token is None:
+            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
+
+        is_verified, decoded_user_token = verify_user_token(firebase_token)
+
+        if not is_verified:
+            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
+        
+        user_id = decoded_user_token.get("uid")
+
+        try:
+            linked_accounts = get_linked_users(user_id)
+            return make_response(jsonify({"linked_accounts": linked_accounts}), 200)
+        except Exception as e:
+            return make_response(jsonify({"error": f"Failed to get linked accounts: {str(e)}"}), 500)

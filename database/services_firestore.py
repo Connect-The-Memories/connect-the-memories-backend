@@ -56,7 +56,7 @@ def get_user_data(user_id: str) -> dict:
 def store_messages(support_user_id: str, message: str) -> str:
     """
         Stores support user uploaded messages in Firestore.
-        #TODO: Work on figuring out how to store the messages in the primary user's database instead of the support user's database. 
+        #TODO: Work on figuring out how to store the messages in the main user's database instead of the support user's database. 
     """
     
     
@@ -101,7 +101,7 @@ def generate_otp(user_id: str) -> str:
     otp_ref = firestore_db.collection("one_time_codes").document(user_id)
     otp_ref.set({
         "otp": otp, 
-        "primary_user_id": user_id, 
+        "main_user_id": user_id, 
         "expires_at": expiration_date
     })
     return otp
@@ -122,34 +122,66 @@ def validate_otp(support_user_id: str, entered_otp: str) -> tuple[bool, str]:
         if hasattr(expires_at, 'to_datetime'):
             expires_at = expires_at.to_datetime()
 
-        primary_user_id = data["primary_user_id"]
+        main_user_id = data["main_user_id"]
 
         if datetime.now(tz=timezone.utc) > expires_at:
             return False, "OTP has expired."
 
-        link_id = f"{primary_user_id}_{support_user_id}"
+        link_id = f"{main_user_id}_{support_user_id}"
 
         link_exists = firestore_db.collection("user_links").document(link_id).get().exists
 
-        support_user_doc = firestore_db.collection("users").document(primary_user_id).collection("support_users").document(support_user_id).get()
-        subcollection_exists = support_user_doc.exists
-
-        if link_exists or subcollection_exists:
+        if link_exists:
             return False, "Users are already linked."
 
+        main_user_data = get_user_data(main_user_id)
+        main_user_full_name = f"{main_user_data['first_name']} {main_user_data['last_name']}"
+        support_user_data = get_user_data(support_user_id)
+        support_user_full_name = f"{support_user_data['first_name']} {support_user_data['last_name']}"
+
         firestore_db.collection("user_links").document(link_id).set({
-            "primary_user": primary_user_id,
+            "main_user": main_user_id,
+            "main_user_full_name": main_user_full_name,
             "support_user": support_user_id,
+            "support_user_full_name": support_user_full_name,
             "linked_at": datetime.now(tz=timezone.utc)
         }, merge=True)
-    
-        firestore_db.collection("users").document(primary_user_id).collection("support_users").document(support_user_id).set({
-            "linked_at": datetime.now(timezone.utc),
-            "status": "active"
-        }, merge=True)
 
-        firestore_db.collection("one_time_codes").document(primary_user_id).delete()
+        firestore_db.collection("one_time_codes").document(main_user_id).delete()
 
         return True, "User linked successfully."
 
     return False, "OTP is invalid."
+
+def get_linked_users(user_id: str):
+    """
+        Given a user ID, retrieves the linked users from Firestore. The linked users are stored in a dictionary where the key is the user's full name and the value is the user's ID.
+    """
+
+    user = firestore_db.collection("users").document(user_id).get()
+    if not user.exists:
+        raise ValueError("User data does not exist in the database.")
+    
+    user_data = user.to_dict()
+    user_type = user_data["account_type"]
+
+    linked_users = {}
+
+    if user_type == "main":
+        user_links = firestore_db.collection("user_links").where("main_user", "==", user_id).stream()
+
+        for link in user_links:
+            link_data = link.to_dict()
+            linked_users[link_data["support_user_full_name"]] = link_data["support_user"]
+
+    elif user_type == "support":
+        user_links = firestore_db.collection("user_links").where("support_user", "==", user_id).stream()
+
+        for link in user_links:
+            link_data = link.to_dict()
+            linked_users[link_data["main_user_full_name"]] = link_data["main_user"]
+        
+    else:
+        raise ValueError("User account type is invalid.")
+
+    return linked_users
