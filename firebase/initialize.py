@@ -1,7 +1,7 @@
 import pyrebase
 import firebase_admin
 
-from firebase_admin import auth, credentials, firestore
+from firebase_admin import credentials, firestore
 from config import app_config
 
 
@@ -15,7 +15,6 @@ else:
     firebase_admin.initialize_app()
 
 firestore_db = firestore.client()
-# TODO: Initialize storage
 
 
 """
@@ -24,8 +23,10 @@ firestore_db = firestore.client()
 config = {
     "apiKey": app_config.FIREBASE_API_KEY,
     "authDomain": app_config.FIREBASE_AUTH_DOMAIN,
-    "databaseURL": "", "storageBucket": "" # Required to bypass Pyrebase error since we aren't using Pyrebase for database access.
+    "databaseURL": "",  # Required to bypass Pyrebase error since we aren't using Firebase Realtime Database
+    "storageBucket": app_config.FIREBASE_CLOUD_STORAGE_BUCKET
 }
 
 firebase = pyrebase.initialize_app(config)
 pyre_auth = firebase.auth()
+pyre_cloud_storage = firebase.storage()

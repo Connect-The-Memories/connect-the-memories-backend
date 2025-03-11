@@ -42,6 +42,7 @@ class Config:
     FIREBASE_ADMIN_CREDENTIALS = os.getenv("FIREBASE_ADMIN_CREDENTIALS", "")
     FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY", "")
     FIREBASE_AUTH_DOMAIN = os.getenv("FIREBASE_AUTH_DOMAIN", "")
+    FIREBASE_CLOUD_STORAGE_BUCKET = os.getenv("FIREBASE_CLOUD_STORAGE_BUCKET", "")
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 class DevelopmentConfig(Config):
