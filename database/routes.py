@@ -29,7 +29,6 @@ database_api.add_namespace(database_ns)
     Flask RestX routes
     TODO: Create the routes based:
     - after the user exits out of an exercise, regardless of completion, save exercise data to the database.
-    - message uploads and retrieval
     - img/vid/txt uploads and retrieval
 """
 @database_ns.route("/firestore/messages")
@@ -41,15 +40,15 @@ class Messages(Resource):
         """
         data = request.json
 
-        message = data.get("message")
+        messages = data.get("messages")
         main_user_id = data.get("main_user_id")
 
         if main_user_id is None:
             abort(401, {"error": "Main user ID is required."})
 
         try:
-            doc_id = store_messages(main_user_id, message)
-            return make_response(jsonify({"message_id": doc_id}), 201)
+            doc_id = store_messages(main_user_id, messages)
+            return make_response(jsonify({"message_ids": doc_id}), 201)
         except Exception as e:
             abort(500, {"error": f"Failed to store message: {e}"})
     

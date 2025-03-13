@@ -53,16 +53,27 @@ def get_user_data(user_id: str) -> dict:
 """
     Firestore Service Function(s)
 """
-def store_messages(main_user_id: str, message: str) -> str:
+def store_messages(main_user_id: str, messages: list[str]) -> list[str]:
     """
-        Stores support user uploaded messages in Firestore.
+        Given user id and array of messages, batch store the messages in Firestore using batch writes.
     """
     user_ref = firestore_db.collection("users").document(main_user_id).collection("messages")
-    doc_ref = user_ref.add({
-        "message": message,
-        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        })
-    return doc_ref.id
+
+    batch = firestore_db.batch()
+
+    doc_id = []
+
+    for msg in messages:
+        doc_ref = user_ref.document()
+        batch.set(doc_ref, {
+            "message": msg,
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            })
+        doc_id.append(doc_ref.id)
+    
+    batch.commit()
+
+    return doc_id
 
 def retrieve_messages(user_id: str, last_message_id: str = None, limit: int = 5) -> tuple:
     """
