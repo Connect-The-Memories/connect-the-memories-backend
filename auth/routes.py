@@ -102,12 +102,11 @@ class Account(Resource):
             user = log_in(email, password)
             create_user_data(user.get("localId"), first_name, last_name, email, dob_full, dob_6digit, account_type)
             
-            # Currently doesn't actually log user in so will be commented out for now.
-            # session["firebase_token"] = user.get("idToken")
+            session["firebase_token"] = user.get("idToken")
 
             return make_response(jsonify({
                 "message": "User created and logged in successfully.",
-                # "account_type": account_type
+                "account_type": account_type
                 }), 201)
         except ValueError as e:
             abort(400, str(e))

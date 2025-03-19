@@ -53,7 +53,7 @@ def get_user_data(user_id: str) -> dict:
 """
     Firestore Service Function(s)
 """
-def store_messages(main_user_id: str, messages: list[str]) -> list[str]:
+def store_messages(support_full_name: str, main_user_id: str, messages: list[str]) -> list[str]:
     """
         Given user id and array of messages, batch store the messages in Firestore using batch writes.
     """
@@ -66,6 +66,7 @@ def store_messages(main_user_id: str, messages: list[str]) -> list[str]:
     for msg in messages:
         doc_ref = user_ref.document()
         batch.set(doc_ref, {
+            "support_full_name": support_full_name,
             "message": msg,
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d")
             })

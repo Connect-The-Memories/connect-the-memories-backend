@@ -6,6 +6,7 @@ from flask_restx import Api, Namespace, Resource, abort
 """
 
 from .services_firestore import (
+    get_user_data,
     generate_otp,
     retrieve_messages,
     store_messages,
@@ -46,8 +47,23 @@ class Messages(Resource):
         if main_user_id is None:
             abort(401, {"error": "Main user ID is required."})
 
+        firebase_token = session.get("firebase_token")
+
+        if firebase_token is None:
+            abort(401, {"error": "Unauthorized. Please log in and try again."})
+        
+        is_verified, decoded_user_token = verify_user_token(firebase_token)
+        
+        if not is_verified:
+            abort(401, {"error": "Unauthorized. Please log in and try again."})
+
+        uid = decoded_user_token.get("uid")
+        supp_user_data = get_user_data(uid)
+
+        supp_full_name = supp_user_data.get("first_name") + " " + supp_user_data.get("last_name")
+
         try:
-            doc_id = store_messages(main_user_id, messages)
+            doc_id = store_messages(supp_full_name, main_user_id, messages)
             return make_response(jsonify({"message_ids": doc_id}), 201)
         except Exception as e:
             abort(500, {"error": f"Failed to store message: {e}"})
