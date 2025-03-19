@@ -1,8 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import random
 
-from google.cloud import firestore
-
 
 """
     Import Helper Functions
@@ -49,6 +47,16 @@ def get_user_data(user_id: str) -> dict:
         raise ValueError("User data does not exist in the database.")
     
     return user_data.to_dict()
+
+def store_upload_metadata(metadata: dict) -> None:
+    """
+        Given metadata, stores the metadata in Firestore.
+        TODO: Make document be support user's ID instead of file name.
+    """
+    try:
+        firestore_db.collection("uploads").document(metadata["file_name"]).set(metadata)
+    except Exception as e:
+        raise RuntimeError(f"Error storing upload metadata: {e}")
 
 """
     Firestore Service Function(s)

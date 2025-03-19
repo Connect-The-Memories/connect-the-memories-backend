@@ -1,7 +1,9 @@
 import mimetypes
 import os
+from datetime import datetime
 
 from firebase.initialize import pyre_cloud_storage
+from .services_firestore import store_upload_metadata
 
 
 """
@@ -34,9 +36,28 @@ def upload_file(user_id: str, file_path: str) -> str:
 
     try:
         file_type = get_file_type(file_path)
-        file_name = os.path.basename(file_path)
-        destination_path = f"{user_id}/{file_type}/{file_name}"
+        file_ext = os.path.splitext(file_path)[1]
+
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        file_name = f"{timestamp}{file_ext}"
+        destination_path = f"{user_id}/{file_name}"
+
+        # TODO: Instead of using supp user's ID, just store straight into main user's db.
         pyre_cloud_storage.child(destination_path).put(file_path, user_id)
-        return file_name
+        file_url = pyre_cloud_storage.child(destination_path).get_url(user_id)
+
+        # TODO: Fix obtaining metadata
+        metadata = {
+            "support_user_id": user_id,
+            "support_user_name": "Support User",
+            "main_user_id": "main_user_id",
+            "file_url": file_url,
+            "file_type": file_type,
+            "uploaded_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        store_upload_metadata(metadata)
+
+        return file_url
     except Exception as e:
         raise RuntimeError(f"Error uploading file: {e}")
