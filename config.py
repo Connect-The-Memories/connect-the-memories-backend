@@ -28,13 +28,16 @@ def get_secret(secret_name, default_value=""):
 
 # Load Secrets (Only When in Cloud Run)
 if is_local:
+    print("Loading secrets locally from .env")
+else:
+    print("Running in Cloud Run: Fetching secrets from Secret Manager")
     os.environ["SECRET_KEY"] = get_secret("SECRET_KEY", "default_secret")
     os.environ["DEBUG"] = get_secret("DEBUG", "False")
     os.environ["FIREBASE_API_KEY"] = get_secret("FIREBASE_API_KEY", "")
     os.environ["FIREBASE_AUTH_DOMAIN"] = get_secret("FIREBASE_AUTH_DOMAIN", "")
+    os.environ["FIREBASE_CLOUD_STORAGE_BUCKET"] = get_secret("FIREBASE_CLOUD_STORAGE_BUCKET", "")
     os.environ["FRONTEND_URL"] = get_secret("FRONTEND_URL", "http://localhost:3000")
     os.environ["FLASK_ENV"] = get_secret("FLASK_ENV", "development")
-
 # Flask Config
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "default_secret")
