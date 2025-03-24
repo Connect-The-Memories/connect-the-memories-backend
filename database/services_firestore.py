@@ -6,6 +6,7 @@ import random
     Import Helper Functions
 """
 from firebase.initialize import firestore_db
+from firebase.helper_functions import verify_user_token
 
 
 """
@@ -51,10 +52,9 @@ def get_user_data(user_id: str) -> dict:
 def store_upload_metadata(metadata: dict) -> None:
     """
         Given metadata, stores the metadata in Firestore.
-        TODO: Make document be support user's ID instead of file name.
     """
     try:
-        firestore_db.collection("uploads").document(metadata["file_name"]).set(metadata)
+        firestore_db.collection("uploads").document(metadata['main_user_id']).collection("user_uploads").add(metadata)
     except Exception as e:
         raise RuntimeError(f"Error storing upload metadata: {e}")
 
@@ -192,3 +192,29 @@ def get_linked_users(user_id: str):
     
     user_data = user.to_dict()
     return user_data.get("linked_users", {})
+
+def get_verified_uid_from_user_name(support_user_uid: str, user_name: str) -> str:
+    """
+        Given a the full name of a user from the frontend, retrieve the internal UID from firestore.
+    """
+    if support_user_uid is None:
+        raise ValueError("Unauthorized. Please log in and try again.")
+    
+    if user_name is None:
+        raise ValueError("User name is required.")
+    
+    linked_accounts = get_linked_users(support_user_uid)
+
+    if user_name not in linked_accounts:
+        raise ValueError("User not linked to support user.")
+    
+    return linked_accounts[user_name]
+
+def verify_user_link(support_user_uid: str, main_user_id: str) -> bool:
+    """
+        Given a support user ID and a main user ID, verifies if the user is linked.
+    """
+    link_id = f"{main_user_id}_{support_user_uid}"
+    link_exists = firestore_db.collection("user_links").document(link_id).get().exists
+
+    return link_exists

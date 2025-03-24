@@ -29,7 +29,7 @@ def get_file_type(file_path: str) -> str:
         return "other"
 
 
-def upload_file(user_id: str, file_path: str) -> str:
+def upload_file(main_user_id: str, support_user_id: str, support_user_name: str, support_user_firebase_token: str, file_path: str, original_file_name: str, description: str) -> None:
     """
         Given a user ID and file path, uploads the file to Firebase Cloud Storage.
     """
@@ -40,17 +40,17 @@ def upload_file(user_id: str, file_path: str) -> str:
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         file_name = f"{timestamp}{file_ext}"
-        destination_path = f"{user_id}/{file_name}"
+        destination_path = f"{main_user_id}/{file_name}"
 
-        # TODO: Instead of using supp user's ID, just store straight into main user's db.
-        pyre_cloud_storage.child(destination_path).put(file_path, user_id)
-        file_url = pyre_cloud_storage.child(destination_path).get_url(user_id)
+        pyre_cloud_storage.child(destination_path).put(file_path, support_user_firebase_token)
+        file_url = pyre_cloud_storage.child(destination_path).get_url(support_user_firebase_token)
 
-        # TODO: Fix obtaining metadata
         metadata = {
-            "support_user_id": user_id,
-            "support_user_name": "Support User",
-            "main_user_id": "main_user_id",
+            "support_user_name": support_user_name,
+            "support_user_id": support_user_id,
+            "main_user_id": main_user_id,
+            "original_file_name": original_file_name,
+            "description": description,
             "file_url": file_url,
             "file_type": file_type,
             "uploaded_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -58,6 +58,5 @@ def upload_file(user_id: str, file_path: str) -> str:
 
         store_upload_metadata(metadata)
 
-        return file_url
     except Exception as e:
         raise RuntimeError(f"Error uploading file: {e}")
