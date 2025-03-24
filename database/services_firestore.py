@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta, timezone
 import random
+from google.cloud import firestore
 
 
 """
     Import Helper Functions
 """
-from firebase.initialize import firestore_db
+from firebase.initialize import firestore_db, gcp_firestore_db
 
 
 """
@@ -55,9 +56,12 @@ def store_upload_metadata(metadata: dict) -> None:
     try:
         main_user_id = metadata['main_user_id']
 
-        user_ref = firestore_db.collection("uploads").document(main_user_id)
+        user_ref = gcp_firestore_db.collection("uploads").document(main_user_id)
         upload_ref = user_ref.collection("user_uploads")
 
+        transaction = gcp_firestore_db.transaction()
+
+        @firestore.transactional
         def transaction_function(transaction):
             snapshot = user_ref.get(transaction=transaction)
             media_counter = snapshot.get("media_counter") or 0
@@ -68,7 +72,7 @@ def store_upload_metadata(metadata: dict) -> None:
 
             upload_ref.add(metadata)
 
-        firestore_db.run_transaction(transaction_function)         
+        transaction_function(transaction)       
 
     except Exception as e:
         raise RuntimeError(f"Error storing upload metadata: {e}")
@@ -250,3 +254,29 @@ def get_user_media(user_id: str):
         })
 
     return media
+
+def get_random_indexed_media(user_id: str, visited_indices: list[int]) -> dict:
+    """
+        Given a user ID, retrieves a random image from the user's images that has not been visited before.
+    """
+    user_doc = firestore_db.collection("uploads").document(user_id).get()
+
+    media_count = user_doc.get("media_counter") or 0
+    if media_count == 0:
+        raise ValueError("No media found for user.")
+    
+    available_indices = set(range(media_count)) - set(visited_indices)
+
+    if not available_indices:
+        raise ValueError("All media has been visited.")
+    
+    random_index = random.choice(list(available_indices))
+
+    query = firestore_db.collection("uploads").document(user_id).collection("user_uploads").where("media_index", "==", random_index).limit(1)
+
+    docs = list(query.stream())
+
+    if not docs:
+        raise ValueError("Media not found.")
+    
+    return docs[0].to_dict()

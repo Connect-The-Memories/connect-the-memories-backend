@@ -3,7 +3,6 @@ import tempfile
 from flask import Blueprint, jsonify, make_response, request, session
 from flask_restx import Api, Namespace, Resource, abort
 from werkzeug.utils import secure_filename
-from datetime import datetime
 
 """
     Import functions from services for database access.
@@ -17,7 +16,8 @@ from .services_firestore import (
     validate_otp,
     get_linked_users,
     get_verified_uid_from_user_name,
-    verify_user_link
+    verify_user_link,
+    get_random_indexed_media
     )
 
 from .services_firebase_storage import upload_file, generate_signed_urls
@@ -230,7 +230,6 @@ class Media(Resource):
                 temp_path = os.path.join(tmpdir, file_name)
                 file_storage.save(temp_path)
 
-
                 try:
                     desc = descriptions[i] if i < len(descriptions) else ""
                     date = file_dates[i] if i < len(file_dates) else ""
@@ -265,28 +264,44 @@ class Media(Resource):
             return make_response(jsonify({"error": f"Failed to retrieve images: {str(e)}"}), 500)        
 
 
-# TODO: implement this route
-# @database_ns.route("/firestore/media/random_indexed")
-# class RandomIndexedMedia(Resource):
-#     @database_ns.doc("get_random_indexed_media")
-#     def get(self):
-#         """
-#             (GET /media/random_indexed) Route to retrieve random indexed media from Firestore.
-#         """
-#         firebase_token = session.get("firebase_token")
+@database_ns.route("/firestore/media/random_indexed")
+class RandomIndexedMedia(Resource):
+    @database_ns.doc("get_random_indexed_media")
+    def get(self):
+        """
+            (GET /media/random_indexed) Route to retrieve random indexed media from Firestore.
+        """
+        firebase_token = session.get("firebase_token")
 
-#         if firebase_token is None:
-#             return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-#         # 
-#         is_verified, decoded_user_token = verify_user_token(firebase_token)
+        if firebase_token is None:
+            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
 
-#         if not is_verified:
-#             return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-#         # 
-#         user_id = decoded_user_token.get("uid")
+        is_verified, decoded_user_token = verify_user_token(firebase_token)
 
-#         try:
-#             # media = get_random_indexed_media(user_id)
-#             return make_response(jsonify({"media": media}), 200)
-#         except Exception as e:
-#             return make_response(jsonify({"error": f"Failed to retrieve images: {str(e)}"}), 500)
+        if not is_verified:
+            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
+
+        user_id = decoded_user_token.get("uid")
+
+        session_key = f"visited_{user_id}"
+        visited_indices = session.get(session_key, [])
+        count = int(request.args.get("count", 1))
+
+        try:
+            media_list = []
+            for _ in range(count):
+                try:
+                    media = get_random_indexed_media(user_id, visited_indices)
+                    media_list.append(media)
+                    visited_indices.append(media["media_index"])
+                except ValueError as ve:
+                    break
+
+            session[session_key] = list(visited_indices)
+
+            if not media_list:
+                return make_response(jsonify({"error": "No unvisited media found."}), 404)
+
+            return make_response(jsonify({"media": media_list}), 200)
+        except Exception as e:
+            return make_response(jsonify({"error": f"Failed to retrieve images: {str(e)}"}), 500)

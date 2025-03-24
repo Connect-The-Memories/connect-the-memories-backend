@@ -16,6 +16,7 @@ pyrebase4 = "*"
 pytest = "*"
 python-dotenv = "*"
 setuptools = "*"
+google-cloud-firestore = "*"
 
 [dev-packages]
 
