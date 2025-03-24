@@ -97,18 +97,10 @@ class Messages(Resource):
         if not is_verified:
             abort(401, {"error": "Unauthorized. Please log in and try again."})
 
-        last_message_id = request.args.get("last_message_id")
-        limit = request.args.get("limit", default=5, type=int)
-
         try:
-            messages, new_last_message_id = retrieve_messages(
-                decoded_user_token.get("uid"),
-                last_message_id=last_message_id,
-                limit=limit
-            )
+            messages = retrieve_messages(decoded_user_token.get("uid"))
             return make_response(jsonify({
                 "messages": messages,
-                "last_message_id": new_last_message_id
             }), 200)
         except Exception as e:
             abort(500, {"error": f"Failed to retrieve messages: {e}"})

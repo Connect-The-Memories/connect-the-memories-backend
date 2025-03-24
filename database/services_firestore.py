@@ -84,31 +84,27 @@ def store_messages(support_full_name: str, main_user_id: str, messages: list[str
 
     return doc_id
 
-def retrieve_messages(user_id: str, last_message_id: str = None, limit: int = 5) -> tuple:
+def retrieve_messages(user_id: str) -> tuple:
     """
         Retrieves support user uploaded messages from Firestore.
     """
     user_ref = firestore_db.collection("users").document(user_id).collection("messages")
     
-    query = user_ref.order_by("timestamp", direction="DESCENDING").limit(limit)
-
-    if last_message_id:
-        last_doc_ref = user_ref.document(last_message_id).get()
-        if last_doc_ref.exists:
-            query = query.start_after(last_doc_ref)
+    query = user_ref.order_by("timestamp", direction="DESCENDING")
 
     messages = query.stream()
 
     message_list = []
-    last_message_id = None
 
     for message in messages:
         message_dict = message.to_dict()
-        message_dict["id"] = message.id
-        message_list.append(message_dict)
-        last_message_id = message.id
+        message_list.append({
+            "support_full_name": message_dict["support_full_name"],
+            "message": message_dict["message"],
+            "timestamp": message_dict["timestamp"]
+        })
 
-    return message_list, last_message_id
+    return message_list
 
 def generate_otp(user_id: str) -> str:
     """
