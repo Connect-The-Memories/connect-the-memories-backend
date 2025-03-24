@@ -192,7 +192,7 @@ class AccountLogout(Resource):
         if not is_verified:
             abort(401, "User is not logged in and is unauthorized.")
         
-        session.pop("firebase_token", None)
+        session.clear()
         return make_response(jsonify({"message": "User has been logged out successfully."}), 200)
 
 

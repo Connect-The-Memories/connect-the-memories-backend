@@ -263,3 +263,30 @@ class Media(Resource):
             return make_response(jsonify({"media": media}), 200)
         except Exception as e:
             return make_response(jsonify({"error": f"Failed to retrieve images: {str(e)}"}), 500)        
+
+
+# TODO: implement this route
+# @database_ns.route("/firestore/media/random_indexed")
+# class RandomIndexedMedia(Resource):
+#     @database_ns.doc("get_random_indexed_media")
+#     def get(self):
+#         """
+#             (GET /media/random_indexed) Route to retrieve random indexed media from Firestore.
+#         """
+#         firebase_token = session.get("firebase_token")
+
+#         if firebase_token is None:
+#             return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
+#         # 
+#         is_verified, decoded_user_token = verify_user_token(firebase_token)
+
+#         if not is_verified:
+#             return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
+#         # 
+#         user_id = decoded_user_token.get("uid")
+
+#         try:
+#             # media = get_random_indexed_media(user_id)
+#             return make_response(jsonify({"media": media}), 200)
+#         except Exception as e:
+#             return make_response(jsonify({"error": f"Failed to retrieve images: {str(e)}"}), 500)

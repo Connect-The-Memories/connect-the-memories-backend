@@ -6,7 +6,6 @@ import random
     Import Helper Functions
 """
 from firebase.initialize import firestore_db
-from firebase.helper_functions import verify_user_token
 
 
 """
@@ -54,7 +53,23 @@ def store_upload_metadata(metadata: dict) -> None:
         Given metadata, stores the metadata in Firestore.
     """
     try:
-        firestore_db.collection("uploads").document(metadata['main_user_id']).collection("user_uploads").add(metadata)
+        main_user_id = metadata['main_user_id']
+
+        user_ref = firestore_db.collection("uploads").document(main_user_id)
+        upload_ref = user_ref.collection("user_uploads")
+
+        def transaction_function(transaction):
+            snapshot = user_ref.get(transaction=transaction)
+            media_counter = snapshot.get("media_counter") or 0
+
+            metadata['media_index'] = media_counter
+
+            transaction.set(user_ref, {"media_counter": media_counter + 1}, merge=True)
+
+            upload_ref.add(metadata)
+
+        firestore_db.run_transaction(transaction_function)         
+
     except Exception as e:
         raise RuntimeError(f"Error storing upload metadata: {e}")
 
