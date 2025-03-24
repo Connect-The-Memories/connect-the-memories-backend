@@ -28,4 +28,4 @@ if __name__ == '__main__':
         app.run(host='0.0.0.0', port=port, debug=app.config["DEBUG"])
     else:
         # Local development
-        app.run(host='localhost', port=port, debug=True)
+        app.run(host='localhost', debug=True)
