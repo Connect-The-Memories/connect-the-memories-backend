@@ -1,9 +1,9 @@
 import mimetypes
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from firebase.initialize import pyre_cloud_storage
-from .services_firestore import store_upload_metadata
+from firebase.initialize import pyre_cloud_storage, bucket
+from .services_firestore import store_upload_metadata, get_user_media
 
 
 """
@@ -29,7 +29,7 @@ def get_file_type(file_path: str) -> str:
         return "other"
 
 
-def upload_file(main_user_id: str, support_user_id: str, support_user_name: str, support_user_firebase_token: str, file_path: str, original_file_name: str, description: str) -> None:
+def upload_file(main_user_id: str, support_user_id: str, support_user_name: str, support_user_firebase_token: str, file_path: str, original_file_name: str, description: str, date: str) -> None:
     """
         Given a user ID and file path, uploads the file to Firebase Cloud Storage.
     """
@@ -43,7 +43,6 @@ def upload_file(main_user_id: str, support_user_id: str, support_user_name: str,
         destination_path = f"{main_user_id}/{file_name}"
 
         pyre_cloud_storage.child(destination_path).put(file_path, support_user_firebase_token)
-        file_url = pyre_cloud_storage.child(destination_path).get_url(support_user_firebase_token)
 
         metadata = {
             "support_user_name": support_user_name,
@@ -51,12 +50,38 @@ def upload_file(main_user_id: str, support_user_id: str, support_user_name: str,
             "main_user_id": main_user_id,
             "original_file_name": original_file_name,
             "description": description,
-            "file_url": file_url,
+            "destination_path": destination_path,
             "file_type": file_type,
-            "uploaded_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "uploaded_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "approx_date_taken": datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m-%d")
         }
 
         store_upload_metadata(metadata)
 
     except Exception as e:
         raise RuntimeError(f"Error uploading file: {e}")
+
+def generate_signed_urls(user_id: str, expiration=30) -> dict:
+    """
+        Given a user ID, generates signed URLs for all images in the user's uploads. Signed URLs expire after 30 minutes.
+    """
+    try:
+        media = get_user_media(user_id)
+
+        signed_urls = []
+        for file in media:
+            blob = bucket.blob(file['destination_path'])
+            signed_url = blob.generate_signed_url(
+                version="v4",
+                expiration=timedelta(minutes=expiration),
+                method="GET"
+            )
+            signed_urls.append({
+                "support_user_name": file['support_user_name'],
+                "signed_url": signed_url
+            })
+
+        return signed_urls
+
+    except Exception as e:
+        raise RuntimeError(f"Error generating signed URLs: {e}")

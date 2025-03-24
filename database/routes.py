@@ -20,7 +20,7 @@ from .services_firestore import (
     verify_user_link
     )
 
-from .services_firebase_storage import upload_file
+from .services_firebase_storage import upload_file, generate_signed_urls
 
 from firebase.helper_functions import verify_user_token
 
@@ -38,7 +38,6 @@ database_api.add_namespace(database_ns)
     Flask RestX routes
     TODO: Create the routes based:
     - after the user exits out of an exercise, regardless of completion, save exercise data to the database.
-    - img/vid/txt uploads and retrieval
 """
 @database_ns.route("/firestore/messages")
 class Messages(Resource):
@@ -220,6 +219,7 @@ class Media(Resource):
         main_user_name = request.form.get("main_user_name")
         files = request.files.getlist("files")
         descriptions = request.form.getlist("descriptions")
+        file_dates = request.form.getlist("dates")
 
         supp_user_uid = decoded_user_token.get("uid")
         supp_user_data = get_user_data(supp_user_uid)
@@ -241,7 +241,8 @@ class Media(Resource):
 
                 try:
                     desc = descriptions[i] if i < len(descriptions) else ""
-                    upload_file(main_user_uid, supp_user_uid, supp_user_full_name, firebase_token, temp_path, file_name, desc)
+                    date = file_dates[i] if i < len(file_dates) else ""
+                    upload_file(main_user_uid, supp_user_uid, supp_user_full_name, firebase_token, temp_path, file_name, desc, date)
 
                 except Exception as e:
                     return {"error": str(e)}, 500
@@ -253,4 +254,20 @@ class Media(Resource):
         """
             (GET /media) Route to retrieve media from Firebase Cloud Storage.
         """
-        pass
+        firebase_token = session.get("firebase_token")
+
+        if firebase_token is None:
+            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
+        
+        is_verified, decoded_user_token = verify_user_token(firebase_token)
+
+        if not is_verified:
+            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
+        
+        user_id = decoded_user_token.get("uid")
+
+        try:
+            media = generate_signed_urls(user_id)
+            return make_response(jsonify({"media": media}), 200)
+        except Exception as e:
+            return make_response(jsonify({"error": f"Failed to retrieve images: {str(e)}"}), 500)        

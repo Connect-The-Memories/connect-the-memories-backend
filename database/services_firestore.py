@@ -218,3 +218,24 @@ def verify_user_link(support_user_uid: str, main_user_id: str) -> bool:
     link_exists = firestore_db.collection("user_links").document(link_id).get().exists
 
     return link_exists
+
+# TODO: Implement pagination for user images if needed.
+def get_user_media(user_id: str):
+    """
+        Given a user ID, retrieves the user's images from Firestore.
+    """
+    collection_ref = firestore_db.collection("uploads").document(user_id).collection("user_uploads")
+
+    query = collection_ref.order_by("uploaded_at", direction="DESCENDING")
+
+    results = query.stream()
+
+    media = []
+    for doc in results:
+        data = doc.to_dict()
+        media.append({
+            "destination_path": data["destination_path"],
+            "support_user_name": data["support_user_name"],
+        })
+
+    return media

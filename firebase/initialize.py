@@ -1,7 +1,7 @@
 import pyrebase
 import firebase_admin
+from firebase_admin import credentials, firestore, storage
 
-from firebase_admin import credentials, firestore
 from config import app_config
 
 
@@ -10,11 +10,16 @@ from config import app_config
 """
 if not app_config.FIREBASE_ADMIN_CREDENTIALS == "":
     cred = credentials.Certificate(app_config.FIREBASE_ADMIN_CREDENTIALS)
-    firebase_admin.initialize_app(cred)
+    firebase_admin.initialize_app(cred, {
+        "storageBucket": app_config.FIREBASE_CLOUD_STORAGE_BUCKET
+    })
 else:
-    firebase_admin.initialize_app()
+    firebase_admin.initialize_app(options={
+        "storageBucket": app_config.FIREBASE_CLOUD_STORAGE_BUCKET
+    })
 
 firestore_db = firestore.client()
+bucket = storage.bucket()
 
 
 """
