@@ -294,7 +294,7 @@ class RandomIndexedMedia(Resource):
                     media = get_random_indexed_media(user_id, visited_indices)
                     media_list.append(media)
                     visited_indices.append(media["media_index"])
-                except ValueError as ve:
+                except ValueError:
                     break
 
             session[session_key] = list(visited_indices)
