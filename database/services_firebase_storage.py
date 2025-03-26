@@ -3,7 +3,7 @@ import os
 from datetime import datetime, timedelta
 
 from firebase.initialize import pyre_cloud_storage, bucket
-from .services_firestore import store_upload_metadata, get_user_media
+from .services_helper_functions import store_upload_metadata, get_user_media
 
 
 """

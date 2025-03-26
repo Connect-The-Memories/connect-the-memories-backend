@@ -1,12 +1,11 @@
 from datetime import datetime, timedelta, timezone
 import random
-from google.cloud import firestore
-
 
 """
     Import Helper Functions
 """
-from firebase.initialize import firestore_db, gcp_firestore_db
+from firebase.initialize import firestore_db
+from .services_helper_functions import generate_per_file_signed_url
 
 
 """
@@ -49,33 +48,6 @@ def get_user_data(user_id: str) -> dict:
     
     return user_data.to_dict()
 
-def store_upload_metadata(metadata: dict) -> None:
-    """
-        Given metadata, stores the metadata in Firestore.
-    """
-    try:
-        main_user_id = metadata['main_user_id']
-
-        user_ref = gcp_firestore_db.collection("uploads").document(main_user_id)
-        upload_ref = user_ref.collection("user_uploads")
-
-        transaction = gcp_firestore_db.transaction()
-
-        @firestore.transactional
-        def transaction_function(transaction):
-            snapshot = user_ref.get(transaction=transaction)
-            media_counter = snapshot.get("media_counter") or 0
-
-            metadata['media_index'] = media_counter
-
-            transaction.set(user_ref, {"media_counter": media_counter + 1}, merge=True)
-
-            upload_ref.add(metadata)
-
-        transaction_function(transaction)       
-
-    except Exception as e:
-        raise RuntimeError(f"Error storing upload metadata: {e}")
 
 """
     Firestore Service Function(s)
@@ -234,27 +206,6 @@ def verify_user_link(support_user_uid: str, main_user_id: str) -> bool:
 
     return link_exists
 
-# TODO: Implement pagination for user images if needed.
-def get_user_media(user_id: str):
-    """
-        Given a user ID, retrieves the user's images from Firestore.
-    """
-    collection_ref = firestore_db.collection("uploads").document(user_id).collection("user_uploads")
-
-    query = collection_ref.order_by("uploaded_at", direction="DESCENDING")
-
-    results = query.stream()
-
-    media = []
-    for doc in results:
-        data = doc.to_dict()
-        media.append({
-            "destination_path": data["destination_path"],
-            "support_user_name": data["support_user_name"],
-        })
-
-    return media
-
 def get_random_indexed_media(user_id: str, visited_indices: list[int]) -> dict:
     """
         Given a user ID, retrieves a random image from the user's images that has not been visited before.
@@ -279,4 +230,13 @@ def get_random_indexed_media(user_id: str, visited_indices: list[int]) -> dict:
     if not docs:
         raise ValueError("Media not found.")
     
-    return docs[0].to_dict()
+    media = docs[0].to_dict()
+    signed_url = generate_per_file_signed_url(media)
+
+    required_media_data = {
+        "signed_url": signed_url,
+        "approx_date_taken": media["approx_date_taken"],
+        "description": media["description"],
+    }
+
+    return required_media_data
