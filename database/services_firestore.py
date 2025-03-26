@@ -237,6 +237,7 @@ def get_random_indexed_media(user_id: str, visited_indices: list[int]) -> dict:
         "signed_url": signed_url,
         "approx_date_taken": media["approx_date_taken"],
         "description": media["description"],
+        "media_index": media["media_index"]
     }
 
     return required_media_data
