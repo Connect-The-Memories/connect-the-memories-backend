@@ -36,17 +36,20 @@ else:
     os.environ["FIREBASE_API_KEY"] = get_secret("FIREBASE_API_KEY", "")
     os.environ["FIREBASE_AUTH_DOMAIN"] = get_secret("FIREBASE_AUTH_DOMAIN", "")
     os.environ["FIREBASE_CLOUD_STORAGE_BUCKET"] = get_secret("FIREBASE_CLOUD_STORAGE_BUCKET", "")
+    os.environ["FIREBASE_PROJECT_ID"] = get_secret("FIREBASE_PROJECT_ID", "")
     os.environ["FRONTEND_URL"] = get_secret("FRONTEND_URL", "http://localhost:3000")
     os.environ["FLASK_ENV"] = get_secret("FLASK_ENV", "development")
 # Flask Config
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "default_secret")
     DEBUG = os.getenv("DEBUG", "False").lower() in ["true", "1", "t"]
-    FIREBASE_ADMIN_CREDENTIALS = os.getenv("FIREBASE_ADMIN_CREDENTIALS", "")
+    FIREBASE_ADMIN_CREDENTIALS = os.getenv("FIREBASE_ADMIN_CREDENTIALS", "") # Only used in local development
     FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY", "")
     FIREBASE_AUTH_DOMAIN = os.getenv("FIREBASE_AUTH_DOMAIN", "")
     FIREBASE_CLOUD_STORAGE_BUCKET = os.getenv("FIREBASE_CLOUD_STORAGE_BUCKET", "")
+    FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "")
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    FLASK_ENV = os.getenv("FLASK_ENV", "development")
 
 class DevelopmentConfig(Config):
     DEBUG = True

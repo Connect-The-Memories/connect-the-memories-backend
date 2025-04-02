@@ -17,6 +17,8 @@ pytest = "*"
 python-dotenv = "*"
 setuptools = "*"
 google-cloud-firestore = "*"
+google-cloud-vision = "*"
+google-cloud-aiplatform = "*"
 
 [dev-packages]
 

@@ -3,7 +3,8 @@ import os
 from datetime import datetime, timedelta
 
 from firebase.initialize import pyre_cloud_storage, bucket
-from .services_helper_functions import store_upload_metadata, get_user_media
+from .services_helper_functions import store_upload_metadata, get_user_media, analyze_image
+from config import app_config
 
 
 """
@@ -44,6 +45,8 @@ def upload_file(main_user_id: str, support_user_id: str, support_user_name: str,
 
         pyre_cloud_storage.child(destination_path).put(file_path, support_user_firebase_token)
 
+        gcs_uri = f"gs://{app_config.FIREBASE_CLOUD_STORAGE_BUCKET}/{destination_path}"
+
         metadata = {
             "support_user_name": support_user_name,
             "support_user_id": support_user_id,
@@ -55,6 +58,10 @@ def upload_file(main_user_id: str, support_user_id: str, support_user_name: str,
             "uploaded_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "approx_date_taken": datetime.strptime(date, "%Y-%m-%d").strftime("%Y-%m-%d")
         }
+
+        if file_type == "image":
+            analysis = analyze_image(gcs_uri, description)
+            metadata["analysis"] = analysis
 
         store_upload_metadata(metadata)
 
