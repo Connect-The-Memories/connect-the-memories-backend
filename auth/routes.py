@@ -53,9 +53,12 @@ class Account(Resource):
             (GET /account) Route to retrieve user account information, primarily user's first name and list of linked users.
         """
         try:
+            print(f"GET /account: Received session cookie data: {session}")
             firebase_token = session.get("firebase_token")
+            print(f"GET /account: Value from session.get('firebase_token'): {firebase_token}")
 
             if not firebase_token:
+                print("GET /account: firebase_token is None or empty, aborting with 400.")
                 abort(400, "User is not logged in.")
 
             is_verified, decoded_user_token = verify_user_token(firebase_token)
