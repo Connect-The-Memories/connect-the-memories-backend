@@ -155,8 +155,10 @@ class AccountLogin(Resource):
         # _, dob_6digit = format_dob(dob_input)
 
         try:
+            print(f"Email: {email}, Password: {password}")
             user = log_in(email, password)
             session["firebase_token"] = user.get("idToken")
+            print(f"Session after login: {session}")
   
             user_data = firestore_db.collection("users").document(user.get("localId"))
             user_data_snapshot = user_data.get()
