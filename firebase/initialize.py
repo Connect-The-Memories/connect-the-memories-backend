@@ -2,7 +2,7 @@ import pyrebase
 import firebase_admin
 from firebase_admin import credentials, storage
 from firebase_admin import firestore as fs
-from google.cloud import firestore
+from google.cloud import firestore, vision
 from google.oauth2 import service_account
 
 from config import app_config
@@ -28,8 +28,17 @@ bucket = storage.bucket()
 """
     GCP Firestore Initialization for Transactions
 """
-gcp_credentials = service_account.Credentials.from_service_account_file(app_config.FIREBASE_ADMIN_CREDENTIALS)
-gcp_firestore_db = firestore.Client(credentials=gcp_credentials)
+if not app_config.FIREBASE_ADMIN_CREDENTIALS == "":
+    gcp_credentials = service_account.Credentials.from_service_account_file(app_config.FIREBASE_ADMIN_CREDENTIALS)
+    gcp_firestore_db = firestore.Client(credentials=gcp_credentials)
+    vision_client = vision.ImageAnnotatorClient(credentials=gcp_credentials)
+else:
+    try:
+        gcp_firestore_db = firestore.Client(project=app_config.FIREBASE_PROJECT_ID)
+        vision_client = vision.ImageAnnotatorClient()
+    except Exception as e:
+        print(f"Warning: Could not load GCP Firestore credentials. Error: {e}")
+        gcp_firestore_db = None
 
 
 """

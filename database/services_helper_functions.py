@@ -1,12 +1,13 @@
 """
     This file contains helper functions that are used in either file but must be stored here to prevent circular imports. Also includes additional helper functions for uploaded media analysis.
 """
-from google.cloud import vision, firestore, aiplatform
-from vertexai.preview.generative_models import GenerativeModel, Part
+from google.cloud import vision, firestore
+from vertexai.preview.vision_models import ImageQnAModel
 from typing import Dict, Any
 from datetime import datetime, timedelta
+import vertexai
 
-from firebase.initialize import firestore_db, gcp_firestore_db, bucket, gcp_credentials
+from firebase.initialize import firestore_db, gcp_firestore_db, bucket, vision_client
 from config import app_config
 
 """
@@ -84,8 +85,7 @@ def generate_per_file_signed_url(media: dict, expiration=1) -> str:
 """
     Image Analysis Helper Functions
 """
-vision_client = vision.ImageAnnotatorClient(credentials=gcp_credentials)
-aiplatform.init(project=app_config.FIREBASE_PROJECT_ID, location="us-central1")
+vertexai.init(project=app_config.FIREBASE_PROJECT_ID, location="us-central1")
 
 
 def analyze_image(gcs_uri: str, description: str = "") -> Dict[str, Any]:
@@ -163,7 +163,7 @@ def analyze_with_vertex(gcs_uri: str, description: str = "") -> str:
     """
         Analyze image with Vertex AI Gemini
     """
-    model = GenerativeModel("gemini-pro-vision")
+    model = ImageQnAModel.from_pretrained("gemini-1.5-pro-002")
     
     prompt = f"""Analyze this image in detail and provide the following information:
 
@@ -183,11 +183,9 @@ def analyze_with_vertex(gcs_uri: str, description: str = "") -> str:
     User provided description: "{description}"
     """
     
-    response = model.generate_content(
-        [
-            prompt,
-            Part.from_uri(gcs_uri, mime_type="image/jpeg")
-        ]
+    response = model.ask_question(
+        image={"gcs_uri": gcs_uri},
+        question=prompt,
     )
     
     return response.text
