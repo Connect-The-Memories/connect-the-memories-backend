@@ -50,16 +50,16 @@ class Config:
     FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "")
     FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
     FLASK_ENV = os.getenv("FLASK_ENV", "development")
+    # Session Cookie Settings
+    SESSION_COOKIE_SECURE = True  # Send cookie only over HTTPS
+    SESSION_COOKIE_HTTPONLY = True # Prevent client-side JS access
+    SESSION_COOKIE_SAMESITE = 'None'  # CSRF protection
 
 class DevelopmentConfig(Config):
     DEBUG = True
 
 class ProductionConfig(Config):
     DEBUG = False
-    # Session Cookie Settings
-    SESSION_COOKIE_SECURE = True  # Send cookie only over HTTPS
-    SESSION_COOKIE_HTTPONLY = True # Prevent client-side JS access
-    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
 
 config_name = os.getenv("FLASK_ENV", "development").lower()
 app_config = ProductionConfig() if config_name == "production" else DevelopmentConfig()

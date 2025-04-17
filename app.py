@@ -13,7 +13,14 @@ def create_app():
     app.config.from_object(app_config)
     print("Security Key:", app.config["SECRET_KEY"])
     
-    CORS(app, supports_credentials=True, allow_headers=["Content-Type", "Authorization"])
+    # Allow specific origin(s)
+    origins = [app_config.FRONTEND_URL]
+    # Add local dev origin if needed (check FLASK_ENV)
+    if app.config.get("FLASK_ENV") == "development":
+        # Assuming local frontend runs on 3000, adjust if needed
+        origins.append("http://localhost:3000")
+
+    CORS(app, supports_credentials=True, origins=origins, allow_headers=["Content-Type", "Authorization"])
 
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(database_bp, url_prefix="/api")
