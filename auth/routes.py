@@ -54,9 +54,6 @@ class Account(Resource):
             (GET /account) Route to retrieve user account information, primarily user's first name and list of linked users.
         """
         try:
-
-            print(f"Secret Key: {app_config.SECRET_KEY}")
-
             raw_cookie_header = request.headers.get('Cookie')
             print(f"GET /account: Raw Cookie Header Received by Flask (Prod): {raw_cookie_header}")
             session_cookie_value = request.cookies.get('session') # Default name 'session'
@@ -65,7 +62,7 @@ class Account(Resource):
 
 
             print(f"GET /account: Received session cookie data: {session}")
-            firebase_token = session.get("test")
+            firebase_token = session.get("firebase_token")
             print(f"GET /account: Value from session.get('firebase_token'): {firebase_token}")
 
             if not firebase_token:
@@ -166,11 +163,9 @@ class AccountLogin(Resource):
         # _, dob_6digit = format_dob(dob_input)
 
         try:
-            print(f"Secret Key: {app_config.SECRET_KEY}")
             print(f"Email: {email}, Password: {password}")
             user = log_in(email, password)
-            # session["firebase_token"] = user.get("idToken")
-            session['test'] = 'okay'
+            session["firebase_token"] = user.get("idToken")
             print(f"Session after login: {session}")
   
             user_data = firestore_db.collection("users").document(user.get("localId"))

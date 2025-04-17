@@ -11,7 +11,6 @@ from config import app_config
 def create_app():
     app = Flask(__name__)
     app.config.from_object(app_config)
-    print("Security Key:", app.config["SECRET_KEY"])
     
     # Allow specific origin(s)
     origins = [app_config.FRONTEND_URL]
