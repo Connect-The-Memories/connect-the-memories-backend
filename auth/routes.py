@@ -53,6 +53,13 @@ class Account(Resource):
             (GET /account) Route to retrieve user account information, primarily user's first name and list of linked users.
         """
         try:
+            raw_cookie_header = request.headers.get('Cookie')
+            print(f"GET /account: Raw Cookie Header Received by Flask (Prod): {raw_cookie_header}")
+            session_cookie_value = request.cookies.get('session') # Default name 'session'
+            print(f"GET /account: Value from request.cookies.get('session') (Prod): {session_cookie_value}")
+            print(f"GET /account: Flask session object before get (Prod): {session}") # Keep this for debugging
+
+
             print(f"GET /account: Received session cookie data: {session}")
             firebase_token = session.get("firebase_token")
             print(f"GET /account: Value from session.get('firebase_token'): {firebase_token}")
