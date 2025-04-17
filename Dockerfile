@@ -1,5 +1,5 @@
 # Use an official Python runtime as base image
-FROM python:3.13.1-slim
+FROM python:3.13.3-slim
 
 ENV PYTHONUNBUFFERED=1
 
@@ -22,4 +22,4 @@ COPY . ./
 EXPOSE 8080
 
 # Use Gunicorn for better performance
-ENTRYPOINT ["gunicorn", "-b", "0.0.0.0:8080", "app:app"]
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
