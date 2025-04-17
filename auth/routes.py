@@ -65,7 +65,7 @@ class Account(Resource):
 
 
             print(f"GET /account: Received session cookie data: {session}")
-            firebase_token = session.get("firebase_token")
+            firebase_token = session.get("test")
             print(f"GET /account: Value from session.get('firebase_token'): {firebase_token}")
 
             if not firebase_token:
@@ -169,7 +169,8 @@ class AccountLogin(Resource):
             print(f"Secret Key: {app_config.SECRET_KEY}")
             print(f"Email: {email}, Password: {password}")
             user = log_in(email, password)
-            session["firebase_token"] = user.get("idToken")
+            # session["firebase_token"] = user.get("idToken")
+            session['test'] = 'okay'
             print(f"Session after login: {session}")
   
             user_data = firestore_db.collection("users").document(user.get("localId"))
