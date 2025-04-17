@@ -1,4 +1,4 @@
-# Backend API for Connect The Memories
+# Backend API for Connect The Memories (To Be Rewritten)
 
 - [Routes](#routes)
 - [Getting Started](#getting-started)
@@ -28,7 +28,7 @@ Here are the requirments and instructions to get this backend to run locally.
     ```
 
 - ```.env``` and ```serviceAccount.json``` from @Dossr-NK
-- Prior to installation, make sure ```.env``` and ```serviceAccount.json``` are in the correct folders as followed:
+- Prior to installation, make sure ```.env``` and ```serviceAccount.json``` are in the correct folders as followed (this uses a temporary project that will be deleted once prototype is mostly completed):
 
 ![file_structure](/images/file_structure.png)
 
