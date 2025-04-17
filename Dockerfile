@@ -22,4 +22,4 @@ COPY . ./
 EXPOSE 8080
 
 # Use Gunicorn for better performance
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
+ENTRYPOINT ["gunicorn", "-b", "0.0.0.0:8080", "app:app"]

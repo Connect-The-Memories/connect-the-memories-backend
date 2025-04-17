@@ -41,8 +41,7 @@ else:
     os.environ["FLASK_ENV"] = get_secret("FLASK_ENV", "development")
 # Flask Config
 class Config:
-    # SECRET_KEY = os.getenv("SECRET_KEY", "default_secret")
-    SECRET_KEY = "generate-a-new-long-random-static-string-here-for-testing"
+    SECRET_KEY = os.getenv("SECRET_KEY", "default_secret")
     DEBUG = os.getenv("DEBUG", "False").lower() in ["true", "1", "t"]
     FIREBASE_ADMIN_CREDENTIALS = os.getenv("FIREBASE_ADMIN_CREDENTIALS", "") # Only used in local development
     FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY", "")
