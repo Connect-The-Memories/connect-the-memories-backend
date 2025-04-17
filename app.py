@@ -1,7 +1,7 @@
 import os
 
 from flask import Flask
-from flask_cors import CORS
+# from flask_cors import CORS
 
 from auth import auth_bp
 from database import database_bp
@@ -11,9 +11,9 @@ from config import app_config
 def create_app():
     app = Flask(__name__)
     app.config.from_object(app_config)
+    print("App Config Loaded:", app_config)
     
     # CORS(app, supports_credentials=True, origins=app_config.FRONTEND_URL, allow_headers=["Content-Type", "Authorization"])
-    CORS(app)
 
     app.register_blueprint(auth_bp, url_prefix="/api")
     app.register_blueprint(database_bp, url_prefix="/api")
