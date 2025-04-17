@@ -25,6 +25,7 @@ from database.services_firestore import create_user_data, delete_user_data, get_
 from firebase.helper_functions import verify_user_token
 from firebase.initialize import firestore_db
 
+from config import app_config
 
 """
     Declare blueprint, api, and namespace for authentication backend endpoints.
@@ -53,6 +54,9 @@ class Account(Resource):
             (GET /account) Route to retrieve user account information, primarily user's first name and list of linked users.
         """
         try:
+
+            print(f"Secret Key: {app_config.SECRET_KEY}")
+
             raw_cookie_header = request.headers.get('Cookie')
             print(f"GET /account: Raw Cookie Header Received by Flask (Prod): {raw_cookie_header}")
             session_cookie_value = request.cookies.get('session') # Default name 'session'
@@ -162,6 +166,7 @@ class AccountLogin(Resource):
         # _, dob_6digit = format_dob(dob_input)
 
         try:
+            print(f"Secret Key: {app_config.SECRET_KEY}")
             print(f"Email: {email}, Password: {password}")
             user = log_in(email, password)
             session["firebase_token"] = user.get("idToken")
