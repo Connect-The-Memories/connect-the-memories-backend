@@ -25,7 +25,6 @@ from database.services_firestore import create_user_data, delete_user_data, get_
 from firebase.helper_functions import verify_user_token
 from firebase.initialize import firestore_db
 
-from config import app_config
 
 """
     Declare blueprint, api, and namespace for authentication backend endpoints.
@@ -34,6 +33,22 @@ auth_bp = Blueprint("auth_bp", __name__)
 auth_api = Api(auth_bp, version="1.0", title="Authentication API", description="Endpoints for user authentication of React Frontend")
 auth_ns = Namespace("auth", description="Authentication Endpoints")
 auth_api.add_namespace(auth_ns)
+
+# --- Helper Function for Token Extraction ---
+def get_token_from_header():
+    """Helper to extract Bearer token from Authorization header."""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        # Use 401 Unauthorized for authentication/authorization issues
+        abort(401, "Authorization header missing or invalid format (Bearer <token>).")
+    try:
+        # Extract the token part after "Bearer "
+        token = auth_header.split("Bearer ")[1]
+        if not token:
+             abort(401, "Bearer token missing after 'Bearer ' prefix.")
+        return token
+    except IndexError:
+        abort(401, "Bearer token missing after 'Bearer ' prefix.")
 
 
 """
@@ -54,20 +69,7 @@ class Account(Resource):
             (GET /account) Route to retrieve user account information, primarily user's first name and list of linked users.
         """
         try:
-            raw_cookie_header = request.headers.get('Cookie')
-            print(f"GET /account: Raw Cookie Header Received by Flask (Prod): {raw_cookie_header}")
-            session_cookie_value = request.cookies.get('session') # Default name 'session'
-            print(f"GET /account: Value from request.cookies.get('session') (Prod): {session_cookie_value}")
-            print(f"GET /account: Flask session object before get (Prod): {session}") # Keep this for debugging
-
-
-            print(f"GET /account: Received session cookie data: {session}")
-            firebase_token = session.get("firebase_token")
-            print(f"GET /account: Value from session.get('firebase_token'): {firebase_token}")
-
-            if not firebase_token:
-                print("GET /account: firebase_token is None or empty, aborting with 400.")
-                abort(400, "User is not logged in.")
+            firebase_token = get_token_from_header()
 
             is_verified, decoded_user_token = verify_user_token(firebase_token)
 
@@ -111,13 +113,13 @@ class Account(Resource):
         try:
             create_account(email, password)
             user = log_in(email, password)
+            idToken = user.get("idToken")
             create_user_data(user.get("localId"), first_name, last_name, email, dob_full, dob_6digit, account_type)
-            
-            session["firebase_token"] = user.get("idToken")
 
             return make_response(jsonify({
                 "message": "User created and logged in successfully.",
-                "account_type": account_type
+                "account_type": account_type,
+                "idToken": idToken
                 }), 201)
         except ValueError as e:
             abort(400, str(e))
@@ -130,18 +132,18 @@ class Account(Resource):
             (DELETE /account) Route to delete user account.
         """
         try:
-            firebase_token = session.get("firebase_token")
+            firebase_token = get_token_from_header()
 
             if not firebase_token:
                 abort(400, "User is not logged in.")
             
-            bool, decoded_user_token = verify_user_token(firebase_token)
-            if not bool:
+            is_verified, decoded_user_token = verify_user_token(firebase_token)
+            if not is_verified:
                 abort(400, "Firebase token is invalid.")
 
             delete_account(firebase_token)
             delete_user_data(decoded_user_token.get("uid"))
-            session.pop("firebase_token", None)
+            session.clear()
             return make_response(jsonify({}), 204)
         except RuntimeError as e:
             abort(500, str(e))
@@ -163,10 +165,8 @@ class AccountLogin(Resource):
         # _, dob_6digit = format_dob(dob_input)
 
         try:
-            print(f"Email: {email}, Password: {password}")
             user = log_in(email, password)
-            session["firebase_token"] = user.get("idToken")
-            print(f"Session after login: {session}")
+            idToken = user.get("idToken")
   
             user_data = firestore_db.collection("users").document(user.get("localId"))
             user_data_snapshot = user_data.get()
@@ -185,7 +185,8 @@ class AccountLogin(Resource):
             })
             return make_response(jsonify({
                 "message": "User logged in successfully.",
-                "account_type": stored_account_type
+                "account_type": stored_account_type,
+                "idToken": idToken
                 }), 200)
         except ValueError as e:
             abort(400, str(e))
