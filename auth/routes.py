@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Blueprint, jsonify, make_response, request, session
+from flask import Blueprint, g, jsonify, make_response, request, session
 from flask_restx import Api, Namespace, Resource, abort
 
 
@@ -22,8 +22,9 @@ from .services import (
 
 from database.services_firestore import create_user_data, delete_user_data, get_user_data
 
-from firebase.helper_functions import verify_user_token
 from firebase.initialize import firestore_db
+
+from utils.decorators import token_required
 
 
 """
@@ -33,22 +34,6 @@ auth_bp = Blueprint("auth_bp", __name__)
 auth_api = Api(auth_bp, version="1.0", title="Authentication API", description="Endpoints for user authentication of React Frontend")
 auth_ns = Namespace("auth", description="Authentication Endpoints")
 auth_api.add_namespace(auth_ns)
-
-# --- Helper Function for Token Extraction ---
-def get_token_from_header():
-    """Helper to extract Bearer token from Authorization header."""
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        # Use 401 Unauthorized for authentication/authorization issues
-        abort(401, "Authorization header missing or invalid format (Bearer <token>).")
-    try:
-        # Extract the token part after "Bearer "
-        token = auth_header.split("Bearer ")[1]
-        if not token:
-             abort(401, "Bearer token missing after 'Bearer ' prefix.")
-        return token
-    except IndexError:
-        abort(401, "Bearer token missing after 'Bearer ' prefix.")
 
 
 """
@@ -64,19 +49,13 @@ class Account(Resource):
         (PUT) Route to update user account information. (Currently not implemented, will implement in future if needed.)
     """
     @auth_ns.doc("get_account")
+    @token_required
     def get(self):
         """
             (GET /account) Route to retrieve user account information, primarily user's first name and list of linked users.
         """
         try:
-            firebase_token = get_token_from_header()
-
-            is_verified, decoded_user_token = verify_user_token(firebase_token)
-
-            if not is_verified:
-                abort(401, "User is not logged in and is unauthorized.")
-
-            user_id = decoded_user_token.get("uid")
+            user_id = g.uid
             user_data = get_user_data(user_id)
 
             if not user_data:
@@ -127,22 +106,17 @@ class Account(Resource):
             abort(500, str(e))
 
     @auth_ns.doc("delete_account")
+    @token_required
     def delete(self):
         """
             (DELETE /account) Route to delete user account.
         """
         try:
-            firebase_token = get_token_from_header()
-
-            if not firebase_token:
-                abort(400, "User is not logged in.")
-            
-            is_verified, decoded_user_token = verify_user_token(firebase_token)
-            if not is_verified:
-                abort(400, "Firebase token is invalid.")
+            firebase_token = g.firebase_token
+            user_id = g.uid
 
             delete_account(firebase_token)
-            delete_user_data(decoded_user_token.get("uid"))
+            delete_user_data(user_id)
             session.clear()
             return make_response(jsonify({}), 204)
         except RuntimeError as e:
@@ -200,12 +174,8 @@ class AccountLogout(Resource):
         (POST /account/logout) Route to log out a user.
     """
     @auth_ns.doc("logout")
+    @token_required
     def post(self):
-        is_verified, _ = verify_user_token(session.get("firebase_token"))
-        
-        if not is_verified:
-            abort(401, "User is not logged in and is unauthorized.")
-        
         session.clear()
         return make_response(jsonify({"message": "User has been logged out successfully."}), 200)
 
