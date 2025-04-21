@@ -19,6 +19,7 @@ setuptools = "*"
 google-cloud-firestore = "*"
 google-cloud-vision = "*"
 google-cloud-aiplatform = "*"
+google-cloud-storage = "*"
 
 [dev-packages]
 

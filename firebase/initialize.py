@@ -11,15 +11,10 @@ from config import app_config
 """
     Firebase Admin Credentials and Initialization
 """
-if not app_config.FIREBASE_ADMIN_CREDENTIALS == "":
-    cred = credentials.Certificate(app_config.FIREBASE_ADMIN_CREDENTIALS)
-    firebase_admin.initialize_app(cred, {
-        "storageBucket": app_config.FIREBASE_CLOUD_STORAGE_BUCKET
-    })
-else:
-    firebase_admin.initialize_app(options={
-        "storageBucket": app_config.FIREBASE_CLOUD_STORAGE_BUCKET
-    })
+cred = credentials.Certificate(app_config.FIREBASE_ADMIN_CREDENTIALS)
+firebase_admin.initialize_app(cred, {
+    "storageBucket": app_config.FIREBASE_CLOUD_STORAGE_BUCKET
+})
 
 firestore_db = fs.client()
 bucket = storage.bucket()
@@ -28,17 +23,10 @@ bucket = storage.bucket()
 """
     GCP Firestore Initialization for Transactions
 """
-if not app_config.FIREBASE_ADMIN_CREDENTIALS == "":
-    gcp_credentials = service_account.Credentials.from_service_account_file(app_config.FIREBASE_ADMIN_CREDENTIALS)
-    gcp_firestore_db = firestore.Client(credentials=gcp_credentials)
-    vision_client = vision.ImageAnnotatorClient(credentials=gcp_credentials)
-else:
-    try:
-        gcp_firestore_db = firestore.Client(project=app_config.FIREBASE_PROJECT_ID)
-        vision_client = vision.ImageAnnotatorClient()
-    except Exception as e:
-        print(f"Warning: Could not load GCP Firestore credentials. Error: {e}")
-        gcp_firestore_db = None
+gcp_credentials = service_account.Credentials.from_service_account_file(app_config.FIREBASE_ADMIN_CREDENTIALS)
+gcp_firestore_db = firestore.Client(credentials=gcp_credentials)
+vision_client = vision.ImageAnnotatorClient(credentials=gcp_credentials)
+
 
 
 """
