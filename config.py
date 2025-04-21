@@ -33,7 +33,6 @@ else:
     print("Running in Cloud Run: Fetching secrets from Secret Manager")
     os.environ["SECRET_KEY"] = get_secret("SECRET_KEY", "default_secret")
     os.environ["DEBUG"] = get_secret("DEBUG", "False")
-    os.environ["FIREBASE_ADMIN_CREDENTIALS"] = get_secret("FIREBASE_ADMIN_CREDENTIALS", "")
     os.environ["FIREBASE_API_KEY"] = get_secret("FIREBASE_API_KEY", "")
     os.environ["FIREBASE_AUTH_DOMAIN"] = get_secret("FIREBASE_AUTH_DOMAIN", "")
     os.environ["FIREBASE_CLOUD_STORAGE_BUCKET"] = get_secret("FIREBASE_CLOUD_STORAGE_BUCKET", "")
