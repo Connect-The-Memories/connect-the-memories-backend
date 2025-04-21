@@ -2,7 +2,7 @@
     This file contains helper functions that are used in either file but must be stored here to prevent circular imports. Also includes additional helper functions for uploaded media analysis.
 """
 from google.cloud import vision, firestore
-from vertexai.preview.vision_models import ImageQnAModel
+from vertexai.generative_models import GenerativeModel, Image, Part
 from typing import Dict, Any
 from datetime import datetime, timedelta
 import vertexai
@@ -88,14 +88,14 @@ def generate_per_file_signed_url(media: dict, expiration=1) -> str:
 vertexai.init(project=app_config.FIREBASE_PROJECT_ID, location="us-central1")
 
 
-def analyze_image(gcs_uri: str, description: str = "") -> Dict[str, Any]:
+def analyze_image(gcs_uri: str, mime_type: str, description: str = "") -> Dict[str, Any]:
     """
         Analyze an image using Vision API and Vertex AI.
     """
     try:
         vision_results = analyze_with_vision(gcs_uri)
         
-        vertex_results = analyze_with_vertex(gcs_uri, description)
+        vertex_results = analyze_with_vertex(gcs_uri, mime_type, description)
         
         combined_results = process_results(vision_results, vertex_results)
         
@@ -159,11 +159,11 @@ def analyze_with_vision(gcs_uri: str) -> Dict[str, Any]:
     
     return result
 
-def analyze_with_vertex(gcs_uri: str, description: str = "") -> str:
+def analyze_with_vertex(gcs_uri: str, mime_type: str, description: str = "") -> str:
     """
         Analyze image with Vertex AI Gemini
     """
-    model = ImageQnAModel.from_pretrained("gemini-1.5-pro-002")
+    model = GenerativeModel("gemini-2.0-flash-001")
     
     prompt = f"""Analyze this image in detail and provide the following information:
 
@@ -183,10 +183,9 @@ def analyze_with_vertex(gcs_uri: str, description: str = "") -> str:
     User provided description: "{description}"
     """
     
-    response = model.ask_question(
-        image={"gcs_uri": gcs_uri},
-        question=prompt,
-    )
+    image_part = Part.from_uri(uri=gcs_uri, mime_type=mime_type)
+
+    response = model.generate_content([image_part, prompt])
     
     return response.text
 

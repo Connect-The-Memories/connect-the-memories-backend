@@ -187,11 +187,13 @@ def get_verified_uid_from_user_name(support_user_uid: str, user_name: str) -> st
     if support_user_uid is None:
         raise ValueError("Unauthorized. Please log in and try again.")
     
+    print(user_name)
+
     if user_name is None:
         raise ValueError("User name is required.")
     
     linked_accounts = get_linked_users(support_user_uid)
-
+    print(linked_accounts)
     if user_name not in linked_accounts:
         raise ValueError("User not linked to support user.")
     

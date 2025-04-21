@@ -1,6 +1,6 @@
 import os
 import tempfile
-from flask import Blueprint, jsonify, make_response, request, session
+from flask import Blueprint, g, jsonify, make_response, request, session
 from flask_restx import Api, Namespace, Resource, abort
 from werkzeug.utils import secure_filename
 
@@ -22,7 +22,7 @@ from .services_firestore import (
 
 from .services_firebase_storage import upload_file, generate_signed_urls
 
-from firebase.helper_functions import verify_user_token
+from utils.decorators import token_required
 
 
 """
@@ -42,6 +42,7 @@ database_api.add_namespace(database_ns)
 @database_ns.route("/firestore/messages")
 class Messages(Resource):
     @database_ns.doc("store_messages")
+    @token_required
     def put(self):
         """
             (PUT /messages) Route to store messages in Firestore.
@@ -54,17 +55,7 @@ class Messages(Resource):
         if main_user_name is None:
             abort(401, {"error": "Main user name is required."})
 
-        firebase_token = session.get("firebase_token")
-
-        if firebase_token is None:
-            abort(401, {"error": "Unauthorized. Please log in and try again."})
-        
-        is_verified, decoded_user_token = verify_user_token(firebase_token)
-        
-        if not is_verified:
-            abort(401, {"error": "Unauthorized. Please log in and try again."})
-
-        supp_user_uid = decoded_user_token.get("uid")
+        supp_user_uid = g.uid
         supp_user_data = get_user_data(supp_user_uid)
 
         supp_full_name = supp_user_data.get("first_name") + " " + supp_user_data.get("last_name")
@@ -83,22 +74,13 @@ class Messages(Resource):
             abort(500, {"error": f"Failed to store message: {e}"})
     
     @database_ns.doc("retrieve_messages")
+    @token_required
     def get(self):
         """
             (GET /messages) Route to retrieve messages from Firestore.
         """
-        firebase_token = session.get("firebase_token")
-
-        if firebase_token is None:
-            abort(401, {"error": "Unauthorized. Please log in and try again."})
-        
-        is_verified, decoded_user_token = verify_user_token(firebase_token)
-
-        if not is_verified:
-            abort(401, {"error": "Unauthorized. Please log in and try again."})
-
         try:
-            messages = retrieve_messages(decoded_user_token.get("uid"))
+            messages = retrieve_messages(g.uid)
             return make_response(jsonify({
                 "messages": messages,
             }), 200)
@@ -109,30 +91,20 @@ class Messages(Resource):
 @database_ns.route("/firestore/otp")
 class OTP(Resource):
     @database_ns.doc("generate_otp")
+    @token_required
     def post(self):
         """
             (POST /otp) Route to generate OTP for user.
         """
-        firebase_token = session.get("firebase_token")
-
-        if firebase_token is None:
-            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-
-        is_verified, decoded_user_token = verify_user_token(firebase_token)
-
-        if not is_verified:
-            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-        
-        user_id = decoded_user_token.get("uid")
-
         try:
-            otp = generate_otp(user_id)
+            otp = generate_otp(g.uid)
             return make_response(jsonify({"otp": otp}), 201)
         except Exception as e:
             return make_response(jsonify({"error": f"Failed to generate OTP: {str(e)}"}), 500)
 
     
     @database_ns.doc("validate_otp")
+    @token_required
     def put(self):
         """
             (PUT /otp) Route to validate OTP for user.
@@ -140,20 +112,9 @@ class OTP(Resource):
         data = request.json
 
         entered_otp = data.get("otp")
-        firebase_token = session.get("firebase_token")
-
-        if firebase_token is None:
-            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-
-        is_verified, decoded_user_token = verify_user_token(firebase_token)
-
-        if not is_verified:
-            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-        
-        support_user_id = decoded_user_token.get("uid")
 
         try:
-            is_valid, msg = validate_otp(support_user_id, entered_otp)
+            is_valid, msg = validate_otp(g.uid, entered_otp)
 
             if not is_valid:
                 return make_response(jsonify({"error": msg}), 400)
@@ -166,24 +127,13 @@ class OTP(Resource):
 @database_ns.route("/firestore/linked_accounts")
 class LinkedAccounts(Resource):
     @database_ns.doc("get_linked_accounts")
+    @token_required
     def get(self):
         """
             (GET /linked_accounts) Route to get linked accounts for user.
         """
-        firebase_token = session.get("firebase_token")
-
-        if firebase_token is None:
-            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-
-        is_verified, decoded_user_token = verify_user_token(firebase_token)
-
-        if not is_verified:
-            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-        
-        user_id = decoded_user_token.get("uid")
-
         try:
-            linked_users = get_linked_users(user_id)
+            linked_users = get_linked_users(g.uid)
             linked_user_names = list(linked_users.keys())
             return make_response(jsonify({"linked_user_names": linked_user_names}), 200)
         except Exception as e:
@@ -192,28 +142,30 @@ class LinkedAccounts(Resource):
 
 @database_ns.route("/firebase_storage/media")
 class Media(Resource):
+    @database_ns.doc("options_media")
+    def options(self):
+        """Handles CORS preflight requests.
+           This method is intentionally NOT decorated with @token_required.
+           It allows the browser's OPTIONS request to succeed.
+           Flask-CORS (configured globally) should add the necessary
+           Access-Control-* headers to this response.
+        """
+        # Return a simple 200 OK response.
+        # Flask-CORS will intercept this response and add the appropriate headers.
+        return {'message': 'OPTIONS handled'}, 200
     @database_ns.doc("upload_media")
+    @token_required
     def post(self):
         """
             (POST /media) Route to upload media to Firebase Cloud Storage.
         """
-
-        firebase_token = session.get("firebase_token")
-
-        if firebase_token is None:
-            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-        
-        is_verified, decoded_user_token = verify_user_token(firebase_token)
-
-        if not is_verified:
-            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-
         main_user_name = request.form.get("main_user_name")
+        print(main_user_name)
         files = request.files.getlist("files")
         descriptions = request.form.getlist("descriptions")
         file_dates = request.form.getlist("dates")
 
-        supp_user_uid = decoded_user_token.get("uid")
+        supp_user_uid = g.uid
         supp_user_data = get_user_data(supp_user_uid)
         supp_user_full_name = supp_user_data.get("first_name") + " " + supp_user_data.get("last_name")
         main_user_uid = get_verified_uid_from_user_name(supp_user_uid, main_user_name)
@@ -233,7 +185,7 @@ class Media(Resource):
                 try:
                     desc = descriptions[i] if i < len(descriptions) else ""
                     date = file_dates[i] if i < len(file_dates) else ""
-                    upload_file(main_user_uid, supp_user_uid, supp_user_full_name, firebase_token, temp_path, file_name, desc, date)
+                    upload_file(main_user_uid, supp_user_uid, supp_user_full_name, g.firebase_token, temp_path, file_name, desc, date)
 
                 except Exception as e:
                     return {"error": str(e)}, 500
@@ -241,29 +193,18 @@ class Media(Resource):
         return {"message": "Files uploaded successfully"}, 200
 
     @database_ns.doc("retrieve_media")
+    @token_required
     def get(self):
         """
             (GET /media) Route to retrieve media from Firebase Cloud Storage.
         """
-        firebase_token = session.get("firebase_token")
-
-        if firebase_token is None:
-            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-        
-        is_verified, decoded_user_token = verify_user_token(firebase_token)
-
-        if not is_verified:
-            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-        
-        user_id = decoded_user_token.get("uid")
-
         try:
-            media = generate_signed_urls(user_id)
+            media = generate_signed_urls(g.uid)
             return make_response(jsonify({"media": media}), 200)
         except Exception as e:
             return make_response(jsonify({"error": f"Failed to retrieve images: {str(e)}"}), 500)        
 
-
+# TODO: Fix this route since sessions might not work.
 @database_ns.route("/firestore/media/random_indexed")
 class RandomIndexedMedia(Resource):
     @database_ns.doc("get_random_indexed_media")
@@ -271,19 +212,7 @@ class RandomIndexedMedia(Resource):
         """
             (GET /media/random_indexed) Route to retrieve random indexed media from Firestore.
         """
-        firebase_token = session.get("firebase_token")
-
-        if firebase_token is None:
-            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-
-        is_verified, decoded_user_token = verify_user_token(firebase_token)
-
-        if not is_verified:
-            return make_response(jsonify({"error": "Unauthorized. Please log in and try again."}), 401)
-
-        user_id = decoded_user_token.get("uid")
-
-        session_key = f"visited_{user_id}"
+        session_key = f"visited_{g.uid}"
         visited_indices = session.get(session_key, [])
         count = int(request.args.get("count", 1))
 
@@ -291,7 +220,7 @@ class RandomIndexedMedia(Resource):
             media_list = []
             for _ in range(count):
                 try:
-                    media = get_random_indexed_media(user_id, visited_indices)
+                    media = get_random_indexed_media(g.uid, visited_indices)
                     media_list.append(media)
                     visited_indices.append(media["media_index"])
                 except ValueError:

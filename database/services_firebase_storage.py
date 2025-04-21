@@ -21,13 +21,13 @@ def get_file_type(file_path: str) -> str:
     text_types = ["text/plain", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
 
     if mime_type in image_types:
-        return "image"
+        return "image", mime_type
     elif mime_type in video_types:
-        return "video"
+        return "video". mime_type
     elif mime_type in text_types:
-        return "text"
+        return "text", mime_type
     else:
-        return "other"
+        return "other", mime_type
 
 
 def upload_file(main_user_id: str, support_user_id: str, support_user_name: str, support_user_firebase_token: str, file_path: str, original_file_name: str, description: str, date: str) -> None:
@@ -36,7 +36,7 @@ def upload_file(main_user_id: str, support_user_id: str, support_user_name: str,
     """
 
     try:
-        file_type = get_file_type(file_path)
+        file_type, mime_type = get_file_type(file_path)
         file_ext = os.path.splitext(file_path)[1]
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -60,7 +60,7 @@ def upload_file(main_user_id: str, support_user_id: str, support_user_name: str,
         }
 
         if file_type == "image":
-            analysis = analyze_image(gcs_uri, description)
+            analysis = analyze_image(gcs_uri, mime_type, description)
             metadata["analysis"] = analysis
 
         store_upload_metadata(metadata)
