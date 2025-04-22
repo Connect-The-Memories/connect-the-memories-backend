@@ -208,12 +208,14 @@ class Media(Resource):
 @database_ns.route("/firestore/media/random_indexed")
 class RandomIndexedMedia(Resource):
     @database_ns.doc("get_random_indexed_media")
+    @token_required
     def get(self):
         """
             (GET /media/random_indexed) Route to retrieve random indexed media from Firestore.
         """
-        session_key = f"visited_{g.uid}"
-        visited_indices = session.get(session_key, [])
+        # session_key = f"visited_{g.uid}"
+        # visited_indices = session.get(session_key, [])
+        visited_indices = []
         count = int(request.args.get("count", 1))
 
         try:
@@ -225,8 +227,6 @@ class RandomIndexedMedia(Resource):
                     visited_indices.append(media["media_index"])
                 except ValueError:
                     break
-
-            session[session_key] = list(visited_indices)
 
             if not media_list:
                 return make_response(jsonify({"error": "No unvisited media found."}), 404)
