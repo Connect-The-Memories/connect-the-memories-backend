@@ -49,9 +49,6 @@ def get_user_data(user_id: str) -> dict:
     return user_data.to_dict()
 
 
-"""
-    Firestore Service Function(s)
-"""
 def store_messages(support_full_name: str, main_user_id: str, messages: list[str]) -> list[str]:
     """
         Given user id and array of messages, batch store the messages in Firestore using batch writes.
@@ -186,14 +183,12 @@ def get_verified_uid_from_user_name(support_user_uid: str, user_name: str) -> st
     """
     if support_user_uid is None:
         raise ValueError("Unauthorized. Please log in and try again.")
-    
-    print(user_name)
 
     if user_name is None:
         raise ValueError("User name is required.")
     
     linked_accounts = get_linked_users(support_user_uid)
-    print(linked_accounts)
+
     if user_name not in linked_accounts:
         raise ValueError("User not linked to support user.")
     
@@ -243,3 +238,40 @@ def get_random_indexed_media(user_id: str, visited_indices: list[int]) -> dict:
     }
 
     return required_media_data
+
+def store_exercise_data(exercise_name: str, timestamp: datetime, accuracy: float, avg_reaction_time: float, user_id: str) -> None:
+    """
+        Given exercise data, store the data in firestore for each exercise for the user.
+    """
+    try:
+        exercise_ref = firestore_db.collection("exercises").document(exercise_name).collection("user_attempts").document(user_id).collection("attempts").document()
+
+        exercise_data = {
+            'user_id': user_id,
+            'exercise_name': exercise_name,
+            'timestamp': timestamp,
+            'accuracy': accuracy,
+            'avg_reaction_time': avg_reaction_time
+        }
+
+        exercise_ref.set(exercise_data)
+    except Exception as e:
+        raise RuntimeError(f"Error storing exercise data: {e}")
+    
+def get_exercise_data(user_id: str) -> list[dict]:
+    all_attempts = []
+    try:
+        attempts_group_ref = firestore_db.collection_group("attempts")
+        query = attempts_group_ref.where("user_id", "==", user_id).order_by("timestamp", direction="DESCENDING")
+        results = query.stream()
+
+        for attempt in results:
+            attempt_data = attempt.to_dict()
+            attempt_data["id"] = attempt.id
+            all_attempts.append(attempt_data)
+        
+        return all_attempts
+    except Exception as e:
+        raise RuntimeError(f"Error retrieving exercise data: {e}")
+    
+        

@@ -1,53 +1,11 @@
-from datetime import datetime
 import logging
-import re
 
-from firebase_admin import auth
+"""
+    Import Helper Functions and Modules
+"""
 from firebase.initialize import pyre_auth
-
-"""
-    Import Firebase Admin Helper Functions
-"""
 from firebase.helper_functions import check_email_exists
-
-
-"""
-    Helper Functions
-"""
-def check_password_strength(password: str) -> bool:
-    """
-        Check if the password meets certain complexity requirements:
-        - At least one lowercase
-        - At least one uppercase
-        - At least one digit
-        - At least one special character
-        - Minimum length of 8
-    """
-    pattern = r'^(?=.*\d)(?=.*[!@#$%^&*])(?=.*[a-z])(?=.*[A-Z]).{8,}$'
-    return re.match(pattern, password) is not None
-
-def format_dob(dob: str) -> tuple[str, str]:
-    """
-        Convert date of birth to both YYYY-MM-DD for showing the user in the future and MMDDYY for simple 2FA.
-    """
-    if dob is None:
-        logging.error("Received None for date of birth.")
-        raise ValueError("Date of Birth is required but was not provided.")
-
-    try:
-        date_obj = datetime.strptime(dob, "%Y-%m-%d") 
-        dob_full = date_obj.strftime("%Y-%m-%d")
-        dob_6digit = date_obj.strftime("%m%d%y")
-        return dob_full, dob_6digit
-    except ValueError as e:
-        logging.error(f"Error in converting DOB '{dob}': {e}")
-        raise ValueError("Invalid Date of Birth format. Expected YYYY-MM-DD.")
-
-def check_valid_email(email: str) -> bool:
-    """
-        Check if the email is valid.
-    """
-    return re.match(r"[^@]+@[^@]+\.[^@]+", email) is not None
+from utils.validators import check_password_strength, check_valid_email
 
 
 """

@@ -17,12 +17,15 @@ from .services_firestore import (
     get_linked_users,
     get_verified_uid_from_user_name,
     verify_user_link,
-    get_random_indexed_media
+    get_random_indexed_media,
+    store_exercise_data,
+    get_exercise_data
     )
 
 from .services_firebase_storage import upload_file, generate_signed_urls
 
 from utils.decorators import token_required
+from utils.formatters import iso_to_datetime
 
 
 """
@@ -142,17 +145,6 @@ class LinkedAccounts(Resource):
 
 @database_ns.route("/firebase_storage/media")
 class Media(Resource):
-    @database_ns.doc("options_media")
-    def options(self):
-        """Handles CORS preflight requests.
-           This method is intentionally NOT decorated with @token_required.
-           It allows the browser's OPTIONS request to succeed.
-           Flask-CORS (configured globally) should add the necessary
-           Access-Control-* headers to this response.
-        """
-        # Return a simple 200 OK response.
-        # Flask-CORS will intercept this response and add the appropriate headers.
-        return {'message': 'OPTIONS handled'}, 200
     @database_ns.doc("upload_media")
     @token_required
     def post(self):
@@ -160,7 +152,6 @@ class Media(Resource):
             (POST /media) Route to upload media to Firebase Cloud Storage.
         """
         main_user_name = request.form.get("main_user_name")
-        print(main_user_name)
         files = request.files.getlist("files")
         descriptions = request.form.getlist("descriptions")
         file_dates = request.form.getlist("dates")
@@ -204,7 +195,7 @@ class Media(Resource):
         except Exception as e:
             return make_response(jsonify({"error": f"Failed to retrieve images: {str(e)}"}), 500)        
 
-# TODO: Fix this route since sessions might not work.
+
 @database_ns.route("/firestore/media/random_indexed")
 class RandomIndexedMedia(Resource):
     @database_ns.doc("get_random_indexed_media")
@@ -212,6 +203,7 @@ class RandomIndexedMedia(Resource):
     def get(self):
         """
             (GET /media/random_indexed) Route to retrieve random indexed media from Firestore.
+            Removed session usage for simplicity as nothing else uses sessions and there were issues with it on GPC.
         """
         # session_key = f"visited_{g.uid}"
         # visited_indices = session.get(session_key, [])
@@ -234,3 +226,57 @@ class RandomIndexedMedia(Resource):
             return make_response(jsonify({"media": media_list}), 200)
         except Exception as e:
             return make_response(jsonify({"error": f"Failed to retrieve images: {str(e)}"}), 500)
+        
+# TODO: Implement GET route for the exercises
+@database_ns.route("/firestore/exercises")
+class Exercises(Resource):
+    @database_ns.doc("store_exercise_data")
+    @token_required
+    def post(self):
+        """
+            (POST /exercises) Route to store exercise data in Firestore.
+        """
+        data = request.json
+
+        exercise_name = data.get("exercise")
+        timestamp = data.get("timestamp")
+        formatted_timestamp = iso_to_datetime(timestamp)
+        accuracy = float(data.get("accuracy"))
+        avg_reaction_time = float(data.get("avg_reaction_time"))
+
+        if not exercise_name or not timestamp or not accuracy or not avg_reaction_time:
+            return make_response(jsonify({"error": "All fields are required."}), 400)
+        
+        try:
+            store_exercise_data(exercise_name, formatted_timestamp, accuracy, avg_reaction_time, g.uid)
+            return make_response(jsonify({"message": "Exercise data stored successfully."}), 201)
+        except Exception as e:
+            return make_response(jsonify({"error": f"Failed to store exercise data: {str(e)}"}), 500)
+    
+    @database_ns.doc("get_exercise_data")
+    @token_required
+    def get(self):
+        """
+            (GET /exercises) Route to retrieve exercise data from Firestore.
+            # TODO: Implement normalization of the numerical data for graphs (could be done in the frontend?).
+        """
+        try:
+            all_exercise_data = get_exercise_data(g.uid)
+            return make_response(jsonify({"exercise_data": all_exercise_data}), 200)
+        except Exception as e:
+            return make_response(jsonify({"error": f"Failed to retrieve exercise data: {str(e)}"}), 500)
+    
+# TODO: Implement Journal Entires route 
+# @database_ns.route("/firestore/journal_entries")
+# class JournalEntries(Resource):
+#     @database_ns.doc("store_journal_entry")
+#     @token_required
+#     def post(self):
+#         """
+#             (POST /journal_entries) Route to store journal entries in Firestore.
+#         """
+#         data = request.json
+
+
+
+#         try:

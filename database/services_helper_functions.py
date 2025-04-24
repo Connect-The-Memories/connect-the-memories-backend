@@ -2,7 +2,7 @@
     This file contains helper functions that are used in either file but must be stored here to prevent circular imports. Also includes additional helper functions for uploaded media analysis.
 """
 from google.cloud import vision, firestore
-from vertexai.generative_models import GenerativeModel, Image, Part
+from vertexai.generative_models import GenerativeModel, Part
 from typing import Dict, Any
 from datetime import datetime, timedelta
 import vertexai

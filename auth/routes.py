@@ -10,10 +10,6 @@ from flask_restx import Api, Namespace, Resource, abort
 from .models import create_account_model, logging_in_model
 
 from .services import (
-    # Helper functions for routes.
-    format_dob,
-    
-    # Primary functions for routes.
     send_password_reset,
     log_in,
     create_account,
@@ -25,6 +21,7 @@ from database.services_firestore import create_user_data, delete_user_data, get_
 from firebase.initialize import firestore_db
 
 from utils.decorators import token_required
+from utils.formatters import format_dob
 
 
 """
