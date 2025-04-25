@@ -1,12 +1,9 @@
+# /auth/services.py
 import logging
 
-"""
-    Import Helper Functions and Modules
-"""
 from firebase.initialize import pyre_auth
 from firebase.helper_functions import check_email_exists
 from utils.validators import check_password_strength, check_valid_email
-
 
 """
     Authentication Functions
