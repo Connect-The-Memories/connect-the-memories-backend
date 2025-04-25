@@ -228,10 +228,12 @@ def get_random_indexed_media(user_id: str, visited_indices: list[int]) -> dict:
         raise ValueError("Media not found.")
     
     media = docs[0].to_dict()
-    signed_url = generate_per_file_signed_url(media)
+    destination_path = media["destination_path"]
+    signed_url = generate_per_file_signed_url(destination_path)
 
     required_media_data = {
         "signed_url": signed_url,
+        "destination_path": destination_path,
         "approx_date_taken": media["approx_date_taken"],
         "description": media["description"],
         "media_index": media["media_index"]
@@ -267,6 +269,13 @@ def get_exercise_data(user_id: str) -> list[dict]:
 
         for attempt in results:
             attempt_data = attempt.to_dict()
+
+            timestamp = attempt_data.get("timestamp")
+            if hasattr(timestamp, 'to_datetime'):
+                attempt_data["timestamp"] = timestamp.to_datetime(tz=timezone.utc)
+            elif isinstance(timestamp, datetime):
+                attempt_data["timestamp"] = timestamp
+
             attempt_data["id"] = attempt.id
             all_attempts.append(attempt_data)
         
@@ -274,4 +283,20 @@ def get_exercise_data(user_id: str) -> list[dict]:
     except Exception as e:
         raise RuntimeError(f"Error retrieving exercise data: {e}")
     
-        
+def store_journal_entries(entry: str, timestamp: datetime, destination_path: str, user_id: str) -> None:
+    """
+        Given journal entry data, store the data in firestore for each exercise for the user.
+    """
+    try:
+        journal_ref = firestore_db.collection("journals").document(user_id).collection("entries").document()
+
+        journal_data = {
+            'entry': entry,
+            'timestamp': timestamp,
+            'destination_path': destination_path
+        }
+
+        journal_ref.set(journal_data)
+    except Exception as e:
+        raise RuntimeError(f"Error storing journal entry: {e}")
+    

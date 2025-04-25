@@ -66,12 +66,12 @@ def get_user_media(user_id: str):
 """
     Firebase Storage Helper Functions
 """
-def generate_per_file_signed_url(media: dict, expiration=1) -> str:
+def generate_per_file_signed_url(destination_path: str, expiration=1) -> str:
     """
         Given a media file, generates a signed URL for the file. Signed URLs expire after 30 minutes.
     """
     try:
-        blob = bucket.blob(media['destination_path'])
+        blob = bucket.blob(destination_path)
         signed_url = blob.generate_signed_url(
             version="v4",
             expiration=timedelta(days=expiration),

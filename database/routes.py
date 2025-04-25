@@ -19,13 +19,15 @@ from .services_firestore import (
     verify_user_link,
     get_random_indexed_media,
     store_exercise_data,
-    get_exercise_data
+    get_exercise_data,
+    store_journal_entries,
     )
 
 from .services_firebase_storage import upload_file, generate_signed_urls
 
 from utils.decorators import token_required
-from utils.formatters import iso_to_datetime
+from utils.formatters import iso_to_datetime, format_data_for_json
+from utils.normalizors import preprocess_and_normalize
 
 
 """
@@ -226,8 +228,8 @@ class RandomIndexedMedia(Resource):
             return make_response(jsonify({"media": media_list}), 200)
         except Exception as e:
             return make_response(jsonify({"error": f"Failed to retrieve images: {str(e)}"}), 500)
-        
-# TODO: Implement GET route for the exercises
+
+
 @database_ns.route("/firestore/exercises")
 class Exercises(Resource):
     @database_ns.doc("store_exercise_data")
@@ -258,25 +260,36 @@ class Exercises(Resource):
     def get(self):
         """
             (GET /exercises) Route to retrieve exercise data from Firestore.
-            # TODO: Implement normalization of the numerical data for graphs (could be done in the frontend?).
         """
         try:
             all_exercise_data = get_exercise_data(g.uid)
-            return make_response(jsonify({"exercise_data": all_exercise_data}), 200)
+            normalized_data = preprocess_and_normalize(all_exercise_data)
+            json_safe_data = format_data_for_json(normalized_data)
+            return make_response(jsonify({"exercise_data": json_safe_data}), 200)
         except Exception as e:
             return make_response(jsonify({"error": f"Failed to retrieve exercise data: {str(e)}"}), 500)
     
-# TODO: Implement Journal Entires route 
-# @database_ns.route("/firestore/journal_entries")
-# class JournalEntries(Resource):
-#     @database_ns.doc("store_journal_entry")
-#     @token_required
-#     def post(self):
-#         """
-#             (POST /journal_entries) Route to store journal entries in Firestore.
-#         """
-#         data = request.json
+# TODO: Implement get to get the journal entries based on the day for the user.
+@database_ns.route("/firestore/journal_entries")
+class JournalEntries(Resource):
+    @database_ns.doc("store_journal_entry")
+    @token_required
+    def post(self):
+        """
+            (POST /journal_entries) Route to store journal entries in Firestore.
+        """
+        data = request.json
+        entry = data.get("entry")
+        timestamp = data.get("timestamp")
+        destination_path = data.get("destination_path")
 
+        if not entry or not timestamp or not destination_path:
+            return make_response(jsonify({"error": "All fields are required."}), 400)
 
+        formatted_timestamp = iso_to_datetime(timestamp)
 
-#         try:
+        try:
+            store_exercise_data(entry, formatted_timestamp, destination_path, g.uid)
+            return make_response(jsonify({"message": "Journal entry stored successfully."}), 201)
+        except Exception as e:
+            return make_response(jsonify({"error": f"Failed to store journal entry: {str(e)}"}), 500)
