@@ -7,6 +7,7 @@ import random
 from firebase.initialize import firestore_db
 from .services_helper_functions import generate_per_file_signed_url
 
+from utils.formatters import iso_to_datetime
 
 """
     Firestore Helper Function(s)
@@ -297,4 +298,41 @@ def store_journal_entries(entry: str, timestamp: datetime, destination_path: str
         journal_ref.set(journal_data)
     except Exception as e:
         raise RuntimeError(f"Error storing journal entry: {e}")
+
+def get_journal_entries(user_id: str, date: datetime) -> list[dict]:
+    """
+        Given a user ID, retrieves the journal entries from Firestore.
+    """
+    try:
+
+        if date is None:
+            raise ValueError("Date is required.")
+        
+        start_of_day = date.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_of_day = start_of_day + timedelta(days=1)
+
+        journal_ref = firestore_db.collection("journals").document(user_id).collection("entries")
+        query = (
+            journal_ref.where("timestamp", ">=", start_of_day)
+            .where("timestamp", "<", end_of_day)
+            .order_by("timestamp", direction="DESCENDING")
+        )
+
+        entry_list = []
+
+        for entry in query.stream():
+            entry_dict = entry.to_dict()
+            timestamp = entry_dict.get("timestamp")
+            if hasattr(timestamp, 'to_datetime'):
+                entry_dict["timestamp"] = timestamp.to_datetime()
+            elif isinstance(timestamp, datetime):
+                entry_dict["timestamp"] = timestamp
+
+            entry_dict["signed_url"] = generate_per_file_signed_url(entry_dict["destination_path"])
+            
+            entry_list.append(entry_dict)
+
+        return entry_list
+    except Exception as e:
+        raise RuntimeError(f"Error retrieving journal entries: {e}")
     

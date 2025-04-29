@@ -293,3 +293,24 @@ class JournalEntries(Resource):
             return make_response(jsonify({"message": "Journal entry stored successfully."}), 201)
         except Exception as e:
             return make_response(jsonify({"error": f"Failed to store journal entry: {str(e)}"}), 500)
+        
+    @database_ns.doc("get_journal_entries")
+    @token_required
+    def get(self):
+        """
+            (GET /journal_entries) Route to retrieve journal entries from Firestore.
+        """
+        try:
+            data = request.json
+            date = data.get("date")
+            
+            if not date:
+                return make_response(jsonify({"error": "Date is required."}), 400)
+            
+            formatted_date = iso_to_datetime(date)
+
+            journal_entries = get_exercise_data(g.uid, formatted_date)
+
+            return make_response(jsonify({"journal_entries": journal_entries}), 200)
+        except Exception as e:
+            return make_response(jsonify({"error": f"Failed to retrieve journal entries: {str(e)}"}), 500)

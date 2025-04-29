@@ -68,7 +68,7 @@ def get_user_media(user_id: str):
 """
 def generate_per_file_signed_url(destination_path: str, expiration=1) -> str:
     """
-        Given a media file, generates a signed URL for the file. Signed URLs expire after 30 minutes.
+        Given a media file, generates a signed URL for the file. Signed URLs expire after 1 day.
     """
     try:
         blob = bucket.blob(destination_path)
