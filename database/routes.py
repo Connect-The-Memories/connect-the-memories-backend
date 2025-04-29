@@ -21,6 +21,7 @@ from .services_firestore import (
     store_exercise_data,
     get_exercise_data,
     store_journal_entries,
+    get_journal_entries
     )
 
 from .services_firebase_storage import upload_file, generate_signed_urls
@@ -298,19 +299,30 @@ class JournalEntries(Resource):
     @token_required
     def get(self):
         """
-            (GET /journal_entries) Route to retrieve journal entries from Firestore.
+        GET /firestore/journal_entries?date=YYYY-MM-DDTHH:MM:SS.sssZ
+        Returns all journal entries for that calendar day.
         """
+        # 1) pull date from query-param
+        date_str = request.args.get("date")
+        if not date_str:
+            abort(400, "Missing required `date` query parameter")
+
+        # 2) parse ISO → datetime
         try:
-            data = request.json
-            date = data.get("date")
-            
-            if not date:
-                return make_response(jsonify({"error": "Date is required."}), 400)
-            
-            formatted_date = iso_to_datetime(date)
+            date = iso_to_datetime(date_str)
+        except Exception:
+            abort(400, "Invalid date format; expected ISO string")
 
-            journal_entries = get_exercise_data(g.uid, formatted_date)
-
-            return make_response(jsonify({"journal_entries": journal_entries}), 200)
+        # 3) fetch entries
+        try:
+            entries = get_journal_entries(g.uid, date)
         except Exception as e:
-            return make_response(jsonify({"error": f"Failed to retrieve journal entries: {str(e)}"}), 500)
+            abort(500, f"Failed to retrieve journal entries: {e}")
+
+        # 4) convert each timestamp to ISO for JSON
+        for e in entries:
+            if hasattr(e["timestamp"], "isoformat"):
+                e["timestamp"] = e["timestamp"].isoformat()
+
+        # 5) return under entries 
+        return make_response(jsonify({"entries": entries}), 200)
