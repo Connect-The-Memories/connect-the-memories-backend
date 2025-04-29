@@ -265,18 +265,16 @@ def get_exercise_data(user_id: str) -> list[dict]:
     try:
         attempts_group_ref = firestore_db.collection_group("attempts")
         query = attempts_group_ref.where("user_id", "==", user_id).order_by("timestamp", direction="DESCENDING")
-        results = query.stream()
 
-        for attempt in results:
+        for attempt in query.stream():
             attempt_data = attempt.to_dict()
 
             timestamp = attempt_data.get("timestamp")
             if hasattr(timestamp, 'to_datetime'):
-                attempt_data["timestamp"] = timestamp.to_datetime(tz=timezone.utc)
+                attempt_data["timestamp"] = timestamp.to_datetime().replace(tz=timezone.utc)
             elif isinstance(timestamp, datetime):
                 attempt_data["timestamp"] = timestamp
 
-            attempt_data["id"] = attempt.id
             all_attempts.append(attempt_data)
         
         return all_attempts

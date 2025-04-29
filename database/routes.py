@@ -289,7 +289,7 @@ class JournalEntries(Resource):
         formatted_timestamp = iso_to_datetime(timestamp)
 
         try:
-            store_exercise_data(entry, formatted_timestamp, destination_path, g.uid)
+            store_journal_entries(entry, formatted_timestamp, destination_path, g.uid)
             return make_response(jsonify({"message": "Journal entry stored successfully."}), 201)
         except Exception as e:
             return make_response(jsonify({"error": f"Failed to store journal entry: {str(e)}"}), 500)

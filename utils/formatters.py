@@ -45,9 +45,12 @@ def format_data_for_json(attempts: list[dict]) -> list[dict]:
     """
         Format data for JSON output.
     """
-    formatted_attempts = []
-    for attempt in attempts:
-        formatted_attempt = attempt.copy()
-        formatted_attempt["timestamp"] = attempt["timestamp"].isoformat() if isinstance(attempt["timestamp"], datetime) else attempt["timestamp"]
-        formatted_attempts.append(formatted_attempt)
+    formatted_attempts = [
+    {
+      "date": date.isoformat(),
+      "normalized_accuracy": vals[0],
+      "normalized_rt": vals[1]
+    }
+    for date, vals in sorted(attempts.items())
+]
     return formatted_attempts
