@@ -1,3 +1,4 @@
+import json
 import re
 
 """
@@ -20,3 +21,34 @@ def check_valid_email(email: str) -> bool:
         Check if the email is valid.
     """
     return re.match(r"[^@]+@[^@]+\.[^@]+", email) is not None
+
+"""
+    Utility functions for validating outputs (e.g., generated AI content).
+"""
+def validate_ai_content(content: str) -> json:
+    """
+        Validate AI-generated content.
+        - Check if the content is not empty.
+        - Converts the content to json.
+    """
+    match = re.search(r':\s*"(.*)"', content, re.DOTALL)
+    
+    if not content or not match:
+        raise ValueError("Invalid AI content format.")
+    else:
+        content_string = match.group(1)
+
+        json_string = content_string.strip()
+        if json_string.startswith("```json"):
+            json_string = json_string[len("```json") :]
+        if json_string.endswith("```"):
+            json_string = json_string[: -len("```")]
+        json_string = json_string.strip()
+
+        try:
+            json_object = json.loads(json_string)
+            if not isinstance(json_object, dict):
+                raise ValueError("Invalid JSON format.")
+            return json_object
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Error parsing JSON: {e}")

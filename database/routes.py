@@ -270,7 +270,7 @@ class Exercises(Resource):
         except Exception as e:
             return make_response(jsonify({"error": f"Failed to retrieve exercise data: {str(e)}"}), 500)
     
-# TODO: Implement get to get the journal entries based on the day for the user.
+
 @database_ns.route("/firestore/journal_entries")
 class JournalEntries(Resource):
     @database_ns.doc("store_journal_entry")

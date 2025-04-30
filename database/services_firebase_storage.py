@@ -83,10 +83,17 @@ def generate_signed_urls(user_id: str, expiration=30) -> dict:
                 expiration=timedelta(minutes=expiration),
                 method="GET"
             )
-            signed_urls.append({
+
+            signed_url = {
                 "support_user_name": file['support_user_name'],
                 "signed_url": signed_url
-            })
+            }
+
+            quick_access = file.get('quick_access')
+            if quick_access is not None:
+                signed_url["quick_access"] = quick_access
+
+            signed_urls.append(signed_url)
 
         return signed_urls
 

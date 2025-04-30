@@ -9,6 +9,7 @@ import vertexai
 
 from firebase.initialize import firestore_db, gcp_firestore_db, bucket, vision_client
 from config import app_config
+# from utils.validators import validate_ai_content
 
 """
     Firestore Helper Functions
@@ -55,10 +56,19 @@ def get_user_media(user_id: str):
     media = []
     for doc in results:
         data = doc.to_dict()
-        media.append({
+
+        quick_access = data.get("analysis", {}).get("analysis", {}).get("quick_access", None)
+
+        item = {
             "destination_path": data["destination_path"],
             "support_user_name": data["support_user_name"],
-        })
+        }
+
+        if quick_access is not None:
+            item["quick_access"] = quick_access
+
+        media.append(item)
+
 
     return media
 
@@ -178,7 +188,24 @@ def analyze_with_vertex(gcs_uri: str, mime_type: str, description: str = "") -> 
        - Apparent emotional state
        - What they are doing
        
-    Format your response as structured information with clear headings and bullet points.
+    Format your response as a json object with no extra words or fencing around it using the following structure, but make sure the output is json parsable:
+
+    {{
+        "entities": {{
+            "people": [],
+            "places": [],
+            "objects": []
+        }},
+        "scene": "",
+        "activities": [],
+        "people_analysis": [
+            {{
+                "age_range": "",
+                "emotional_state": "",
+                "activity": ""
+            }}
+        ]
+    }}
     
     User provided description: "{description}"
     """
@@ -201,7 +228,7 @@ def process_results(vision_results: Dict[str, Any], vertex_text: str) -> Dict[st
             'faces': vision_results['faces'],
             'total_faces': len(vision_results['faces'])
         },
-        'gemini_analysis': vertex_text,
+        'gemini_analysis': vertex_text, # TODO: Parse this text into a json, but for now just return the text
         
         'quick_access': {
             'has_people': len(vision_results['faces']) > 0,
@@ -210,7 +237,7 @@ def process_results(vision_results: Dict[str, Any], vertex_text: str) -> Dict[st
             'location': vision_results['landmarks'][0]['name'] if vision_results['landmarks'] else None
         }
     }
-    
+
     scenes = []
     activities = []
     
