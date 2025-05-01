@@ -35,7 +35,7 @@ def normalize_values_min_max(values: List[float], invert: bool = False) -> List[
             normalized_values.append(1 - normalized if invert else normalized)
     return normalized_values
 
-def preprocess_and_normalize(attempts: List[Dict[str, Any]]) -> Dict[str, Any]:
+def process_exercise_data(attempts: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
         Preprocesses and normalizes exercise attempts data.
     """
@@ -57,11 +57,12 @@ def preprocess_and_normalize(attempts: List[Dict[str, Any]]) -> Dict[str, Any]:
         avg_accuracies.append(sum(accuracies) / len(accuracies) if accuracies else 0)
         avg_reaction_times.append(sum(reaction_time) / len(reaction_time) if reaction_time else 0)
 
-    norm_accuracies = normalize_values_min_max(accuracies, invert=False)
-    norm_reaction_time = normalize_values_min_max(reaction_time, invert=True)
+    # Uncomment the following lines if you want to normalize the values, currently commented out due to time restraints (and this is not really that useful at the moment)
+    # norm_accuracies = normalize_values_min_max(accuracies, invert=False)
+    # norm_reaction_time = normalize_values_min_max(reaction_time, invert=True)
 
     result = {}
     for i, day in enumerate(sorted_dates):
-        result[day] = [norm_accuracies[i], norm_reaction_time[i]]
+        result[day] = [avg_accuracies[i], avg_reaction_times[i]]
 
     return result

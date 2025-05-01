@@ -28,7 +28,7 @@ from .services_firebase_storage import upload_file, generate_signed_urls
 
 from utils.decorators import token_required
 from utils.formatters import iso_to_datetime, format_data_for_json
-from utils.normalizors import preprocess_and_normalize
+from utils.normalizors import process_exercise_data
 
 
 """
@@ -264,7 +264,7 @@ class Exercises(Resource):
         """
         try:
             all_exercise_data = get_exercise_data(g.uid)
-            normalized_data = preprocess_and_normalize(all_exercise_data)
+            normalized_data = process_exercise_data(all_exercise_data)
             json_safe_data = format_data_for_json(normalized_data)
             return make_response(jsonify({"exercise_data": json_safe_data}), 200)
         except Exception as e:

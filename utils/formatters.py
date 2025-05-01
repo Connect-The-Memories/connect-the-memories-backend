@@ -48,8 +48,8 @@ def format_data_for_json(attempts: list[dict]) -> list[dict]:
     formatted_attempts = [
     {
       "date": date.isoformat(),
-      "normalized_accuracy": vals[0],
-      "normalized_rt": vals[1]
+      "avg_accuracy": vals[0],
+      "avg_reaction_time": vals[1]
     }
     for date, vals in sorted(attempts.items())
 ]
